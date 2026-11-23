@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoLead — Lead Capture & Follow-Up Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Tesseract.js v5 for Real Client-Side Optical Character Recognition -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <script>
+    const ACCENT = {50:'#eef8f6',100:'#d4eee9',200:'#a9ddd3',300:'#7cc8bb',400:'#4fb1a2',500:'#32978a',600:'#277b70',700:'#1f6159',800:'#1a4d47',900:'#143b37',950:'#0b2623'};
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            slate: {50:'#f7f7f5',100:'#eeeeea',200:'#dcdcd6',300:'#c2c2ba',400:'#9a9a92',500:'#73736c',600:'#52524c',700:'#3a3a35',800:'#2a2a26',900:'#1e1e1b',925:'#181816',950:'#121211'},
+            indigo: ACCENT, violet: ACCENT, cyan: ACCENT,
+            brand: {
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body { background-color:#121211; color:#eeeeea; font-family:'IBM Plex Sans',system-ui,sans-serif; }
+    .glass-card { background:#1b1b19; border:1px solid #2c2c28; border-radius:10px; }
+    .glass-card-elevated { background:#212120; border:1px solid #2f2f2a; }
+    .rounded-2xl { border-radius:10px !important; }
+    .rounded-xl { border-radius:7px !important; }
+    .rounded-lg { border-radius:6px !important; }
+    .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow:none !important; }
+    .backdrop-blur-xl, .backdrop-blur-sm { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+    .font-extrabold { font-weight:600 !important; }
+    .font-bold { font-weight:600 !important; }
+
+    @keyframes scanLaser { 0%{top:0%} 100%{top:96%} }
+    .ocr-laser { position:absolute; left:0; right:0; height:2px; background:#4fb1a2; animation:scanLaser 1.6s linear infinite alternate; }
+
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-track { background:#181816; }
+    ::-webkit-scrollbar-thumb { background:#3a3a35; border-radius:4px; }
+    ::-webkit-scrollbar-thumb:hover { background:#52524c; }
+
+    input[type="date"], select { color-scheme:dark; }
+
+    .pulse-dot::before { display:none; }
+
+    /* dashboard */
+    .dash-tile { text-align:left; background:#1b1b19; border:1px solid #2c2c28; border-radius:8px; padding:12px 14px; transition:border-color .15s; }
+    .dash-tile:hover { border-color:#4a4a43; }
+    .dash-tile.active { border-color:#4fb1a2; background:#1d2321; }
+    .dash-row { border-left:3px solid transparent; }
+    .dash-row + .dash-row { border-top:1px solid #2a2a26; }
+    .tone-late  { border-left-color:#e11d48; }
+    .tone-today { border-left-color:#d99a1d; }
+    .tone-idle  { border-left-color:#4fb1a2; }
+    .tone-wait  { border-left-color:#3a3a35; }
+    .tone-done  { border-left-color:#2a2a26; }
+    .dash-input { background:#121211; border:1px solid #33332e; border-radius:6px; color:#eeeeea; font-size:12px; padding:5px 8px; width:100%; }
+    .dash-input:focus { outline:none; border-color:#4fb1a2; }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-semibold">A</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">AutoLead</h1>
+            
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Scan cards, save leads, follow up on time</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs & Actions -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <nav class="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+          <button onclick="switchMainTab('dashboard')" id="tab-btn-dashboard" class="tab-nav-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition bg-indigo-600 text-white">Dashboard</button>
+          <button onclick="switchMainTab('workspace')" id="tab-btn-workspace" class="tab-nav-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition text-slate-400 hover:text-white">Add &amp; Manage</button>
+          <button onclick="switchMainTab('rules')" id="tab-btn-rules" class="tab-nav-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition text-slate-400 hover:text-white">Templates</button>
+        </nav>
+
+        <button onclick="exportLeadsCSV()" class="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs sm:text-sm font-medium transition flex items-center gap-2" title="Export all leads to CSV">
+          <i class="fa-solid fa-file-csv text-emerald-400"></i>
+          <span class="hidden md:inline">Export CSV</span>
+        </button>
+
+        <button onclick="resetDemoData()" class="p-2 rounded-xl bg-slate-800/70 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-700/60 text-xs transition" title="Reset Demo Data">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top KPI Metrics Bar -->
+    <section id="kpi-bar" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Total Leads</p>
+          <p id="kpi-total-leads" class="text-2xl font-extrabold text-white mt-1">0</p>
+          <p class="text-[11px] text-emerald-400 mt-0.5">Saved in this browser</p>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">OCR Scans Processed</p>
+          <p id="kpi-ocr-scans" class="text-2xl font-extrabold text-white mt-1">0</p>
+          <p class="text-[11px] text-cyan-400 mt-0.5">Tesseract OCR</p>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Active Sequences</p>
+          <p id="kpi-active-seq" class="text-2xl font-extrabold text-white mt-1">0</p>
+          <p class="text-[11px] text-amber-400 mt-0.5">With messages pending</p>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Auto-Messages Sent</p>
+          <p id="kpi-msgs-sent" class="text-2xl font-extrabold text-white mt-1">0</p>
+          <p class="text-[11px] text-violet-400 mt-0.5">WhatsApp & Email</p>
+        </div>
+      </div>
+
+      <button type="button" onclick="quickFilterFollowUp('DUE')" class="glass-card rounded-2xl p-4 flex items-center justify-between text-left hover:border-rose-500/40 transition" title="Show leads whose follow-up is due today or overdue">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Follow-ups Due</p>
+          <p id="kpi-followup-due" class="text-2xl font-extrabold text-white mt-1">0</p>
+          <p class="text-[11px] text-rose-400 mt-0.5">Today + overdue</p>
+        </div>
+      </button>
+
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Conversion Rate</p>
+          <p id="kpi-conversion" class="text-2xl font-extrabold text-white mt-1">0%</p>
+          <p class="text-[11px] text-emerald-400 mt-0.5">Qualified / Won</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 0: DASHBOARD -->
+    <div id="view-dashboard" class="space-y-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-semibold text-white">Saved leads</h2>
+          <p id="dash-date" class="text-sm text-slate-400 mt-0.5"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="dash-search" oninput="renderDashboard()" placeholder="Search name, company, phone" class="dash-input" style="width:240px;padding:7px 10px;font-size:13px" />
+          <button onclick="switchMainTab('workspace')" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium whitespace-nowrap">Add lead</button>
+        </div>
+      </div>
+
+      <div id="dash-tiles" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <section class="lg:col-span-9 glass-card overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-3">
+            <h3 id="dash-list-title" class="text-sm font-semibold text-white">All leads</h3>
+            <span class="text-xs text-slate-500">Most urgent first</span>
+          </div>
+          <div id="dash-list"></div>
+        </section>
+
+        <aside class="lg:col-span-3 space-y-5">
+          <section class="glass-card p-4">
+            <h3 class="text-sm font-semibold text-white mb-3">Where leads are</h3>
+            <div id="dash-stages" class="space-y-2.5"></div>
+          </section>
+          <section class="glass-card p-4">
+            <h3 class="text-sm font-semibold text-white mb-3">Recent activity</h3>
+            <div id="dash-activity" class="space-y-2.5 text-xs"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <!-- VIEW 1: MAIN WORKSPACE (SPLIT SCREEN) -->
+    <div id="view-workspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN (5 cols): OCR Scanner + Auto-Populated New Lead Form -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 1. OCR Business Card / Document Scanner -->
+        <div class="glass-card rounded-2xl p-5 border-indigo-500/25">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                <i class="fa-solid fa-id-card"></i>
+              </span>
+              <div>
+                <h2 class="text-base font-bold text-white">1. Scan a card</h2>
+                <p class="text-xs text-slate-400">Scan business card, invoice, or note to auto-fill form</p>
+              </div>
+            </div>
+
+            <!-- Sample Card Generator Dropdown / Button -->
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="loadSampleBusinessCard()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5">
+                
+                Load Sample Card
+              </button>
+            </div>
+          </div>
+
+          <!-- Camera / Upload quick buttons (camera opens the phone camera directly) -->
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <button type="button" onclick="document.getElementById('ocr-camera-input').click()" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-camera"></i> Scan with Camera
+            </button>
+            <button type="button" onclick="document.getElementById('ocr-file-input').click()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-sm font-semibold transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-image"></i> Upload Photo
+            </button>
+            <input type="file" id="ocr-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)" />
+          </div>
+
+          <!-- Upload Dropzone & Preview Box -->
+          <div id="ocr-dropzone" class="relative rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500/70 bg-slate-900/60 transition-all overflow-hidden group cursor-pointer" onclick="document.getElementById('ocr-file-input').click()">
+            <input type="file" id="ocr-file-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+
+            <!-- Empty Prompt -->
+            <div id="ocr-empty-state" class="py-8 px-4 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-slate-800/90 border border-slate-700 mx-auto flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform mb-3">
+                <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+              </div>
+              <p class="text-sm font-semibold text-slate-200">Drop business card or click to upload</p>
+              <p class="text-xs text-slate-400 mt-1">Supports PNG, JPG, WEBP • Or click <span class="text-cyan-400 font-medium">"Load Sample Card"</span> above</p>
+            </div>
+
+            <!-- Image Preview & Scanning Laser -->
+            <div id="ocr-preview-container" class="hidden relative bg-slate-950 flex items-center justify-center max-h-56 overflow-hidden">
+              <img id="ocr-preview-img" src="" alt="Scanned Card Preview" class="max-h-56 w-auto object-contain mx-auto" />
+              <div id="ocr-laser-bar" class="ocr-laser hidden"></div>
+              <button type="button" onclick="event.stopPropagation(); clearOCRScanner();" class="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-slate-900/90 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-xs transition" title="Clear image">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- OCR Progress Bar & Confidence Badge -->
+          <div id="ocr-status-panel" class="hidden mt-3 p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span id="ocr-status-text" class="font-medium text-cyan-400 flex items-center gap-2">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Initializing Tesseract OCR...
+              </span>
+              <span id="ocr-confidence-badge" class="font-mono text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="ocr-progress-bar" class="h-full bg-indigo-600 hover:bg-indigo-500 transition-all duration-200" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Collapsible Raw OCR Text Output -->
+          <div id="ocr-raw-wrapper" class="hidden mt-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <i class="fa-solid fa-terminal mr-1 text-indigo-400"></i>Extracted Raw OCR Text
+              </span>
+              <button type="button" onclick="reparseRawText()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
+                <i class="fa-solid fa-wand-magic mr-1"></i>Re-Parse Fields
+              </button>
+            </div>
+            <textarea id="ocr-raw-text" rows="3" class="w-full rounded-xl bg-slate-950/90 border border-slate-800 focus:border-indigo-500 text-xs font-mono text-slate-300 p-2.5 focus:outline-none" placeholder="Raw OCR text will appear here..."></textarea>
+          </div>
+        </div>
+
+        <!-- 2. New Lead Capture & Automation Trigger Form -->
+        <form id="lead-capture-form" onsubmit="handleLeadSubmit(event)" class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <i class="fa-solid fa-user-plus"></i>
+              </span>
+              <div>
+                <h2 class="text-base font-bold text-white">2. New Lead & Auto-Sequence</h2>
+                <p class="text-xs text-slate-400">Auto-populated by OCR or enter manually</p>
+              </div>
+            </div>
+            <span id="auto-filled-pill" class="hidden px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              <i class="fa-solid fa-check-double mr-1"></i>OCR Filled
+            </span>
+          </div>
+
+          <!-- Form Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name <span class="text-rose-400">*</span></label>
+              <div class="relative">
+                <i class="fa-solid fa-user absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="text" id="lead-name" required placeholder="e.g. Aarav Deshmukh" class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white placeholder-slate-500 focus:outline-none transition" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Phone / WhatsApp <span class="text-rose-400">*</span></label>
+              <div class="relative">
+                <i class="fa-brands fa-whatsapp absolute left-3 top-3 text-emerald-500 text-xs"></i>
+                <input type="tel" id="lead-phone" required placeholder="+91 98220 45190" class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white placeholder-slate-500 focus:outline-none transition font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="email" id="lead-email" placeholder="aarav@nexatech.in" class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white placeholder-slate-500 focus:outline-none transition" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Company / Organization</label>
+              <div class="relative">
+                <i class="fa-solid fa-building absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="text" id="lead-company" placeholder="NexaTech Solutions" class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white placeholder-slate-500 focus:outline-none transition" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Lead Source</label>
+              <select id="lead-source" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white focus:outline-none">
+                <option value="OCR Card Scan">OCR Card Scan</option>
+                <option value="Website Inbound">Website Inbound</option>
+                <option value="Walk-in / Expo">Walk-in / Expo</option>
+                <option value="Partner Referral">Partner Referral</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Lead Temperature</label>
+              <select id="lead-priority" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white focus:outline-none">
+                <option value="Hot">Hot (Immediate)</option>
+                <option value="Warm" selected>Warm (Standard)</option>
+                <option value="Cold">Cold (Nurture)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Interest / Service Tag & Role</label>
+            <input type="text" id="lead-service" placeholder="e.g. AI Workflow Automation, Enterprise SaaS" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white placeholder-slate-500 focus:outline-none" />
+          </div>
+
+          <!-- Next follow-up date -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Next Follow-Up Date</label>
+            <div class="flex flex-wrap items-center gap-2">
+              <input type="date" id="lead-followup" class="flex-1 min-w-[150px] px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 focus:border-indigo-500 text-sm text-white focus:outline-none" />
+              <button type="button" onclick="setFollowUpPreset(1)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-semibold transition">Tomorrow</button>
+              <button type="button" onclick="setFollowUpPreset(2)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-semibold transition">Day after</button>
+              <button type="button" onclick="setFollowUpPreset(7)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-semibold transition">1 week</button>
+            </div>
+          </div>
+
+          <!-- Follow-up Cadence Preset Selector -->
+          <div class="p-3.5 rounded-xl bg-indigo-950/35 border border-indigo-500/25 space-y-2">
+            <div class="flex items-center justify-between">
+              <label for="lead-cadence" class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-robot text-indigo-400"></i> Automated Follow-Up Sequence
+              </label>
+              <span class="text-[11px] text-slate-400">3-Step Drip</span>
+            </div>
+            <select id="lead-cadence" class="w-full px-3 py-2 rounded-xl bg-slate-950/90 border border-indigo-500/30 focus:border-indigo-400 text-xs sm:text-sm text-white focus:outline-none">
+              <option value="standard">Instant Welcome + 24h Check-in + 3-Day Proposal</option>
+              <option value="enterprise">B2B Enterprise 3-Step Executive Sequence</option>
+              <option value="whatsapp">Quick WhatsApp High-Velocity Drip</option>
+            </select>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              <i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i>
+              <b>Save Lead</b> only stores the lead. <b>Save &amp; Launch Automation</b> also schedules the 3 follow-ups and opens WhatsApp with Step 1 ready to send.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap sm:flex-nowrap items-stretch gap-2 pt-1">
+            <button type="submit" onclick="pendingSubmitMode='save'" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i>
+              Save Lead
+            </button>
+            <button type="submit" onclick="pendingSubmitMode='launch'" class="flex-[1.6] py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-bolt"></i>
+              Save &amp; Launch Automation
+            </button>
+            <button type="button" onclick="resetLeadForm()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition" title="Clear Form">
+              Clear
+            </button>
+          </div>
+        </form>
+
+      </div>
+
+      <!-- RIGHT COLUMN (7 cols): Live Pipeline, Automation Queue & Activity Log -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Pipeline Controls & Filter Bar -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+            <div>
+              <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-diagram-next text-indigo-400"></i>
+                Lead pipeline
+              </h2>
+              <p class="text-xs text-slate-400">Manage leads and send their follow-up messages by WhatsApp or email</p>
+            </div>
+
+            <!-- View Switcher (List vs Kanban) -->
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+              <button type="button" onclick="clearSampleLeads()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 transition" title="Remove the demo/sample leads">
+                <i class="fa-solid fa-broom mr-1"></i>Clear samples
+              </button>
+              <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button onclick="setPipelineView('list')" id="btn-view-list" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition">
+                  <i class="fa-solid fa-list-ul mr-1"></i>Detailed
+                </button>
+                <button onclick="setPipelineView('kanban')" id="btn-view-kanban" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+                  <i class="fa-solid fa-table-columns mr-1"></i>Kanban
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search & Filters -->
+          <div class="grid grid-cols-2 sm:grid-cols-12 gap-3 mt-4">
+            <div class="col-span-2 sm:col-span-12 relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+              <input type="text" id="pipeline-search" oninput="renderPipeline()" placeholder="Search by name, company, phone, or tag..." class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none" />
+            </div>
+            <div class="col-span-1 sm:col-span-4">
+              <select id="pipeline-status-filter" onchange="renderPipeline()" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 focus:outline-none">
+                <option value="ALL">All Statuses</option>
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Follow-up Scheduled">Follow-up Scheduled</option>
+                <option value="Qualified">Qualified</option>
+                <option value="Won">Won</option>
+              </select>
+            </div>
+            <div class="col-span-1 sm:col-span-4">
+              <select id="pipeline-priority-filter" onchange="renderPipeline()" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 focus:outline-none">
+                <option value="ALL">All Temperatures</option>
+                <option value="Hot">Hot</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
+            <div class="col-span-2 sm:col-span-4">
+              <select id="pipeline-followup-filter" onchange="renderPipeline()" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 focus:outline-none">
+                <option value="ALL">Any Follow-up Date</option>
+                <option value="DUE">⏰ Due today + overdue</option>
+                <option value="OVERDUE">Overdue</option>
+                <option value="TODAY">Today</option>
+                <option value="TOMORROW">Tomorrow</option>
+                <option value="WEEK">Next 7 days</option>
+                <option value="NONE">No date set</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Bulk action toolbar: select filtered leads, set follow-up date, launch automation -->
+          <div id="bulk-toolbar" class="mt-3 p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/25 flex flex-wrap items-center gap-2.5">
+            <label class="flex items-center gap-2 text-xs font-semibold text-slate-200 cursor-pointer">
+              <input type="checkbox" id="select-all-leads" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 accent-indigo-500 rounded" />
+              Select all <span class="text-slate-400 font-normal">(<span id="filtered-count">0</span> shown)</span>
+            </label>
+            <span id="selected-count" class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">0 selected</span>
+            <div class="flex items-center gap-1.5 sm:ml-auto flex-wrap">
+              <input type="date" id="bulk-followup" class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500" title="Follow-up date for the selected leads" />
+              <button type="button" onclick="applyBulkFollowUp()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-xs font-semibold transition">
+                <i class="fa-regular fa-calendar-plus mr-1"></i>Set Follow-up
+              </button>
+              <button type="button" onclick="openBulkModal()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition flex items-center gap-1.5">
+                <i class="fa-brands fa-whatsapp"></i><span>Launch Automation (<span id="bulk-launch-n">0</span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pipeline Container (List or Kanban rendered here) -->
+          <div id="pipeline-container" class="mt-4 space-y-3 max-h-[680px] overflow-y-auto pr-1">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- Bottom Split: Upcoming Automation Queue & Live Execution Audit Log -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Automation Queue -->
+          <div class="glass-card rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-amber-400"></i>
+                Scheduled Follow-Up Queue
+              </h3>
+              <span id="queue-count-badge" class="px-2 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/25">0 pending</span>
+            </div>
+            <div id="automation-queue-list" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Live Automation Audit Log -->
+          <div class="glass-card rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-wave-square text-emerald-400"></i>
+                Live Automation Audit Log
+              </h3>
+              <span class="text-[11px] font-mono text-slate-400">Real-time</span>
+            </div>
+            <div id="activity-log-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 font-mono text-xs">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VIEW 2: AUTOMATION RULES & MESSAGE TEMPLATE EDITOR -->
+    <div id="view-rules" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Smart Automation Triggers -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-indigo-400"></i>
+              Automatic actions
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">What happens automatically when a lead is saved</p>
+          </div>
+
+          <div class="space-y-3" id="automation-rules-container">
+            <!-- Rule 1 -->
+            <label class="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-indigo-500/40 transition">
+              <div>
+                <p class="text-sm font-semibold text-white">Auto-Dispatch Step 1 on Capture</p>
+                <p class="text-xs text-slate-400 mt-0.5">Automatically execute the instant welcome message as soon as a lead is saved.</p>
+              </div>
+              <input type="checkbox" id="rule-auto-welcome" onchange="saveAutomationSettings()" class="mt-1 w-4 h-4 accent-indigo-500 rounded" />
+            </label>
+
+            <!-- Rule 2 -->
+            <label class="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-indigo-500/40 transition">
+              <div>
+                <p class="text-sm font-semibold text-white">Auto-Tag OCR Scans as High Intent</p>
+                <p class="text-xs text-slate-400 mt-0.5">Automatically elevate business card scans with executive titles (CEO, Founder, VP) to Hot priority.</p>
+              </div>
+              <input type="checkbox" id="rule-auto-hot-ocr" onchange="saveAutomationSettings()" class="mt-1 w-4 h-4 accent-indigo-500 rounded" />
+            </label>
+
+            <!-- Rule 3 -->
+            <label class="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-indigo-500/40 transition">
+              <div>
+                <p class="text-sm font-semibold text-white">Auto-Escalate Stalled Leads (48h)</p>
+                <p class="text-xs text-slate-400 mt-0.5">Flag leads with no response after 2 sequence steps for manual phone call intervention.</p>
+              </div>
+              <input type="checkbox" id="rule-auto-escalate" onchange="saveAutomationSettings()" class="mt-1 w-4 h-4 accent-indigo-500 rounded" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Dynamic Message Template Editor -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square text-cyan-400"></i>
+                Message templates
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Use variables <code class="text-indigo-300 bg-indigo-950 px-1.5 py-0.5 rounded">{{name}}</code>, <code class="text-indigo-300 bg-indigo-950 px-1.5 py-0.5 rounded">{{company}}</code>, <code class="text-indigo-300 bg-indigo-950 px-1.5 py-0.5 rounded">{{service}}</code></p>
+            </div>
+            <button onclick="saveTemplates()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+              <i class="fa-solid fa-floppy-disk mr-1"></i>Save Templates
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-emerald-400 mb-1">
+                <i class="fa-brands fa-whatsapp mr-1"></i>Step 1: Instant Welcome Message (WhatsApp / SMS)
+              </label>
+              <textarea id="tpl-step-1" rows="2" class="w-full rounded-xl bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 p-3 focus:outline-none"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-cyan-400 mb-1">
+                <i class="fa-solid fa-envelope mr-1"></i>Step 2: 24-Hour Value & Case Study Follow-Up (Email / WhatsApp)
+              </label>
+              <textarea id="tpl-step-2" rows="2" class="w-full rounded-xl bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 p-3 focus:outline-none"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-amber-400 mb-1">
+                <i class="fa-solid fa-phone-volume mr-1"></i>Step 3: 3-Day Proposal & Discovery Call Nudge
+              </label>
+              <textarea id="tpl-step-3" rows="2" class="w-full rounded-xl bg-slate-900/90 border border-slate-700 focus:border-indigo-500 text-xs sm:text-sm text-slate-200 p-3 focus:outline-none"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Lead Details & Sequence Timeline Modal -->
+  <div id="lead-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card border-indigo-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-5 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 id="modal-lead-name" class="text-xl font-bold text-white">Lead Name</h3>
+            <span id="modal-lead-priority" class="px-2.5 py-0.5 rounded-full text-xs font-bold">Hot</span>
+            <span id="modal-lead-source" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">OCR Scan</span>
+          </div>
+          <p id="modal-lead-sub" class="text-xs sm:text-sm text-slate-400 mt-1">Company • Service</p>
+        </div>
+        <button onclick="closeLeadModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Contact Quick Bar -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+          <div>
+            <span class="text-slate-400 block">Phone / WhatsApp</span>
+            <span id="modal-lead-phone" class="font-mono font-semibold text-white text-sm">+91 00000 00000</span>
+          </div>
+          <a id="modal-wa-link" href="#" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5">
+            <i class="fa-brands fa-whatsapp"></i> Chat
+          </a>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+          <div class="truncate pr-2">
+            <span class="text-slate-400 block">Email Address</span>
+            <span id="modal-lead-email" class="font-semibold text-white text-sm truncate block">email@domain.com</span>
+          </div>
+          <a id="modal-mail-link" href="#" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shrink-0">
+            <i class="fa-solid fa-envelope"></i> Email
+          </a>
+        </div>
+      </div>
+
+      <!-- Status Updater -->
+      <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+        <span class="text-xs font-semibold text-slate-300">Pipeline Stage:</span>
+        <select id="modal-status-select" onchange="updateModalLeadStatus()" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none">
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Follow-up Scheduled">Follow-up Scheduled</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Won">Won</option>
+        </select>
+      </div>
+
+      <!-- Sequence Steps Timeline -->
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Follow-up steps</h4>
+        <div id="modal-steps-container" class="space-y-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk "Launch Automation" modal -->
+  <div id="bulk-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card border-emerald-500/30 rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 space-y-4 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-400"></i>Launch Automation</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Opens WhatsApp for each selected lead with the message ready &mdash; tap Send in WhatsApp, come back, tap the next one.</p>
+        </div>
+        <button onclick="closeBulkModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center shrink-0"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-2">
+        <label class="flex items-start gap-2 text-xs sm:text-sm text-slate-200 cursor-pointer">
+          <input type="radio" name="bulk-mode" value="step" checked onchange="setBulkMode('step')" class="mt-1 accent-emerald-500" />
+          <span><b>Each lead's next scheduled step</b> <span class="text-slate-400">(uses your templates and the step's channel; marks the step as sent)</span></span>
+        </label>
+        <label class="flex items-start gap-2 text-xs sm:text-sm text-slate-200 cursor-pointer">
+          <input type="radio" name="bulk-mode" value="custom" onchange="setBulkMode('custom')" class="mt-1 accent-emerald-500" />
+          <span><b>One custom WhatsApp message to everyone</b></span>
+        </label>
+        <textarea id="bulk-custom-msg" rows="3" oninput="renderBulkModal()" class="hidden w-full rounded-xl bg-slate-900/90 border border-slate-700 focus:border-emerald-500 text-xs sm:text-sm text-slate-200 p-3 focus:outline-none" placeholder="Hi {{name}}, ... (you can use {{name}}, {{company}}, {{service}})">Hi {{name}}, following up regarding {{service}} for {{company}}. Is this a good time to talk?</textarea>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+        <span class="font-semibold">After sending, set next follow-up to:</span>
+        <input type="date" id="bulk-modal-followup" class="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500" />
+        <button type="button" onclick="document.getElementById('bulk-modal-followup').value=''" class="text-slate-400 hover:text-white underline">don't change</button>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
+          <span id="bulk-progress-text">0 of 0 opened</span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="bulk-progress-bar" class="h-full bg-indigo-600 hover:bg-indigo-500 transition-all duration-200" style="width:0%"></div>
+        </div>
+      </div>
+
+      <button id="bulk-next-btn" type="button" onclick="bulkOpenNext()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2"></button>
+
+      <div id="bulk-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+
+      <p class="text-[11px] text-slate-500 leading-relaxed">
+        <i class="fa-solid fa-circle-info mr-1"></i>A web page cannot press Send inside WhatsApp for you. For fully automatic sending of thousands of messages a month, the WhatsApp Business API (via a provider) needs to be connected to this CRM.
+      </p>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (Replaces alert/confirm) -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Hidden Canvas used to generate realistic Sample Business Cards for real OCR testing -->
+  <canvas id="sample-card-canvas" width="760" height="440" class="hidden"></canvas>
+
+  <script>
+    /**
+     * ============================================================================
+     * AutoLead OCR & Automated Follow-Up CRM Engine
+     * ============================================================================
+     */
+
+    const STORAGE_KEYS = {
+      LEADS: 'autolead_crm_leads_v1',
+      LOGS: 'autolead_crm_logs_v1',
+      STATS: 'autolead_crm_stats_v1',
+      SETTINGS: 'autolead_crm_settings_v1',
+      TEMPLATES: 'autolead_crm_templates_v1'
+    };
+
+    const DEFAULT_TEMPLATES = {
+      step1: "Hi {{name}}, great connecting with you! Thanks for your interest in {{service}} for {{company}}. Sharing our quick overview deck here — let me know a good time to chat!",
+      step2: "Hello {{name}}, following up on {{service}} at {{company}}. Teams like yours typically cut manual follow-up time by 70% in week one. Would you like a 10-minute tailored walkthrough?",
+      step3: "Hi {{name}}, circling back with a custom proposal outline for {{company}}. Shall we lock in a brief 15-min call tomorrow to review next steps?"
+    };
+
+    const DEFAULT_SETTINGS = {
+      autoWelcome: true,
+      autoHotOcr: true,
+      autoEscalate: true
+    };
+
+    let state = {
+      leads: [],
+      logs: [],
+      ocrScansCount: 0,
+      pipelineView: 'list', // 'list' or 'kanban'
+      activeModalLeadId: null,
+      settings: { ...DEFAULT_SETTINGS },
+      templates: { ...DEFAULT_TEMPLATES },
+      sampleCardIndex: 0,
+      selected: new Set()
+    };
+
+    // Phone numbers of the built-in demo leads (so old saved data is still recognised as sample)
+    const SAMPLE_PHONES = ['+91 98112 60491', '+91 98201 55319', '+91 99001 44280'];
+
+    // Sample Business Cards Data (rendered onto Canvas so Tesseract.js performs real OCR!)
+    const SAMPLE_CARDS = [
+      {
+        name: "Rohan Kulkarni",
+        title: "VP of Engineering",
+        company: "Sahyadri Cloud Systems",
+        phone: "+91 98224 71902",
+        email: "rohan.k@sahyadricloud.in",
+        website: "www.sahyadricloud.in",
+        service: "Cloud Automation & AI Ops",
+        accent: "#4f46e5"
+      },
+      {
+        name: "Ananya Deshpande",
+        title: "Founder & CEO",
+        company: "Veritas FinTech Labs",
+        phone: "+91 97650 33814",
+        email: "ananya@veritasfintech.com",
+        website: "www.veritasfintech.com",
+        service: "Enterprise CRM Integration",
+        accent: "#0891b2"
+      },
+      {
+        name: "Vikramaditya Joshi",
+        title: "Director of Operations",
+        company: "Apex Precision Manufacturing",
+        phone: "+91 94220 88412",
+        email: "v.joshi@apexprecision.co.in",
+        website: "www.apexprecision.co.in",
+        service: "Supply Chain Lead Automation",
+        accent: "#059669"
+      }
+    ];
+
+    // ============================================================================
+    // INITIALIZATION & SEED DATA
+    // ============================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAppState();
+      syncSettingsUI();
+      renderAll();
+      setFollowUpPreset(1);
+      document.getElementById('bulk-followup').value = dateOffset(2);
+      switchMainTab('dashboard');
+    });
+
+    function loadAppState() {
+      try {
+        const savedLeads = localStorage.getItem(STORAGE_KEYS.LEADS);
+        const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
+        const savedStats = localStorage.getItem(STORAGE_KEYS.STATS);
+        const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        const savedTemplates = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
+
+        if (savedSettings) state.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+        if (savedTemplates) state.templates = { ...DEFAULT_TEMPLATES, ...JSON.parse(savedTemplates) };
+
+        if (savedLeads) {
+          state.leads = JSON.parse(savedLeads);
+          state.logs = savedLogs ? JSON.parse(savedLogs) : [];
+          state.ocrScansCount = savedStats ? JSON.parse(savedStats).ocrScansCount || 2 : 2;
+        } else {
+          seedInitialDemoData();
+        }
+      } catch (err) {
+        console.error("Storage load error:", err);
+        seedInitialDemoData();
+      }
+    }
+
+    function seedInitialDemoData() {
+      const now = Date.now();
+      state.ocrScansCount = 2;
+      state.leads = [
+        {
+          id: 'lead-' + (now - 3600000),
+          name: 'Priya Nair',
+          phone: '+91 98112 60491',
+          email: 'priya.nair@kinetixretail.in',
+          company: 'Kinetix Retail Group',
+          source: 'OCR Card Scan',
+          service: 'Omnichannel WhatsApp Drip',
+          priority: 'Hot',
+          status: 'Follow-up Scheduled',
+          cadence: 'standard',
+          createdAt: new Date(now - 7200000).toISOString(),
+          steps: [
+            {
+              stepNum: 1,
+              title: 'Instant Welcome Drip',
+              channel: 'WhatsApp',
+              delayLabel: 'Immediate',
+              dueAt: new Date(now - 7190000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 7190000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step1, { name: 'Priya Nair', company: 'Kinetix Retail Group', service: 'Omnichannel WhatsApp Drip' })
+            },
+            {
+              stepNum: 2,
+              title: '24h Case Study Follow-Up',
+              channel: 'Email',
+              delayLabel: '+24 Hours',
+              dueAt: new Date(now + 18 * 3600000).toISOString(),
+              status: 'Scheduled',
+              message: compileTemplate(DEFAULT_TEMPLATES.step2, { name: 'Priya Nair', company: 'Kinetix Retail Group', service: 'Omnichannel WhatsApp Drip' })
+            },
+            {
+              stepNum: 3,
+              title: '3-Day Proposal & Call Nudge',
+              channel: 'WhatsApp',
+              delayLabel: '+3 Days',
+              dueAt: new Date(now + 66 * 3600000).toISOString(),
+              status: 'Scheduled',
+              message: compileTemplate(DEFAULT_TEMPLATES.step3, { name: 'Priya Nair', company: 'Kinetix Retail Group', service: 'Omnichannel WhatsApp Drip' })
+            }
+          ]
+        },
+        {
+          id: 'lead-' + (now - 1800000),
+          name: 'Siddharth Malhotra',
+          phone: '+91 98201 55319',
+          email: 'siddharth@auroramedtech.com',
+          company: 'Aurora MedTech',
+          source: 'OCR Card Scan',
+          service: 'Enterprise B2B Pipeline',
+          priority: 'Warm',
+          status: 'Qualified',
+          cadence: 'enterprise',
+          createdAt: new Date(now - 86400000).toISOString(),
+          steps: [
+            {
+              stepNum: 1,
+              title: 'Executive Intro Message',
+              channel: 'WhatsApp',
+              delayLabel: 'Immediate',
+              dueAt: new Date(now - 86300000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 86300000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step1, { name: 'Siddharth Malhotra', company: 'Aurora MedTech', service: 'Enterprise B2B Pipeline' })
+            },
+            {
+              stepNum: 2,
+              title: 'ROI & Architecture Brief',
+              channel: 'Email',
+              delayLabel: '+24 Hours',
+              dueAt: new Date(now - 1200000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 1200000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step2, { name: 'Siddharth Malhotra', company: 'Aurora MedTech', service: 'Enterprise B2B Pipeline' })
+            },
+            {
+              stepNum: 3,
+              title: 'Custom Proposal Review',
+              channel: 'WhatsApp',
+              delayLabel: '+3 Days',
+              dueAt: new Date(now + 48 * 3600000).toISOString(),
+              status: 'Scheduled',
+              message: compileTemplate(DEFAULT_TEMPLATES.step3, { name: 'Siddharth Malhotra', company: 'Aurora MedTech', service: 'Enterprise B2B Pipeline' })
+            }
+          ]
+        },
+        {
+          id: 'lead-' + (now - 900000),
+          name: 'Meera Krishnan',
+          phone: '+91 99001 44280',
+          email: 'meera@greenleaflogistics.in',
+          company: 'GreenLeaf Logistics',
+          source: 'Website Inbound',
+          service: 'Fleet CRM Automation',
+          priority: 'Hot',
+          status: 'Won',
+          cadence: 'whatsapp',
+          createdAt: new Date(now - 172800000).toISOString(),
+          steps: [
+            {
+              stepNum: 1,
+              title: 'Instant WhatsApp Greeting',
+              channel: 'WhatsApp',
+              delayLabel: 'Immediate',
+              dueAt: new Date(now - 172700000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 172700000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step1, { name: 'Meera Krishnan', company: 'GreenLeaf Logistics', service: 'Fleet CRM Automation' })
+            },
+            {
+              stepNum: 2,
+              title: 'Demo Booking Link',
+              channel: 'WhatsApp',
+              delayLabel: '+24 Hours',
+              dueAt: new Date(now - 86400000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 86400000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step2, { name: 'Meera Krishnan', company: 'GreenLeaf Logistics', service: 'Fleet CRM Automation' })
+            },
+            {
+              stepNum: 3,
+              title: 'Onboarding Kickoff',
+              channel: 'Email',
+              delayLabel: '+3 Days',
+              dueAt: new Date(now - 3600000).toISOString(),
+              status: 'Sent',
+              sentAt: new Date(now - 3600000).toISOString(),
+              message: compileTemplate(DEFAULT_TEMPLATES.step3, { name: 'Meera Krishnan', company: 'GreenLeaf Logistics', service: 'Fleet CRM Automation' })
+            }
+          ]
+        }
+      ];
+
+      state.logs = [
+        { time: formatTime(new Date(now - 7190000)), text: 'OCR Card Scan parsed Priya Nair (Kinetix Retail Group)', type: 'ocr' },
+        { time: formatTime(new Date(now - 7185000)), text: 'Auto-dispatched Step 1 WhatsApp Welcome to Priya Nair', type: 'auto' },
+        { time: formatTime(new Date(now - 1200000)), text: 'Executed Step 2 Email Follow-up for Siddharth Malhotra', type: 'auto' },
+        { time: formatTime(new Date(now - 3600000)), text: 'Lead Meera Krishnan marked as WON after 3-step drip', type: 'success' }
+      ];
+
+      const seedFollowUps = [dateOffset(1), dateOffset(2), ''];
+      state.leads.forEach((l, i) => { l.isSample = true; l.followUpDate = seedFollowUps[i] || ''; });
+
+      persistState();
+    }
+
+    function persistState() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(state.leads));
+        localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(state.logs));
+        localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify({ ocrScansCount: state.ocrScansCount }));
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings));
+        localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(state.templates));
+      } catch (e) {
+        console.warn("Unable to save to localStorage:", e);
+      }
+    }
+
+    function resetDemoData() {
+      localStorage.removeItem(STORAGE_KEYS.LEADS);
+      localStorage.removeItem(STORAGE_KEYS.LOGS);
+      localStorage.removeItem(STORAGE_KEYS.STATS);
+      seedInitialDemoData();
+      renderAll();
+      showToast('Demo CRM data restored to default state.', 'info');
+    }
+
+    // ============================================================================
+    // 1. REAL CLIENT-SIDE OCR ENGINE (TESSERACT.JS + CANVAS SAMPLE GENERATOR)
+    // ============================================================================
+
+    /**
+     * Generates a crisp, realistic business card image on an HTML5 Canvas
+     * and passes the DataURL directly to Tesseract.js for real optical recognition.
+     */
+    function loadSampleBusinessCard() {
+      const card = SAMPLE_CARDS[state.sampleCardIndex % SAMPLE_CARDS.length];
+      state.sampleCardIndex++;
+
+      const canvas = document.getElementById('sample-card-canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Card background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Left accent bar
+      ctx.fillStyle = card.accent;
+      ctx.fillRect(0, 0, 26, canvas.height);
+
+      // Subtle top right geometric accent
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(26, 0, canvas.width - 26, 125);
+
+      // Company Name (Top)
+      ctx.fillStyle = card.accent;
+      ctx.font = 'bold 26px Arial, sans-serif';
+      ctx.fillText(card.company.toUpperCase(), 64, 68);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '18px Arial, sans-serif';
+      ctx.fillText(card.service, 64, 100);
+
+      // Full Name & Title
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 36px Arial, sans-serif';
+      ctx.fillText(card.name, 64, 195);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '600 22px Arial, sans-serif';
+      ctx.fillText(card.title, 64, 232);
+
+      // Divider line
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(64, 262);
+      ctx.lineTo(680, 262);
+      ctx.stroke();
+
+      // Contact Details (Clean high-contrast typography for accurate OCR)
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '21px Arial, sans-serif';
+      ctx.fillText(`Phone: ${card.phone}`, 64, 308);
+      ctx.fillText(`Email: ${card.email}`, 64, 348);
+      ctx.fillText(`Web: ${card.website}`, 64, 388);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      displayPreviewAndRunOCR(dataUrl, `Sample Card (${card.name})`);
+    }
+
+    function handleImageUpload(event) {
+      const input = event.target;
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        displayPreviewAndRunOCR(e.target.result, file.name || 'camera photo');
+        input.value = ''; // allow re-selecting / re-shooting the same card
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * Phone-camera photos are huge (12MP+). Downscale to ~1800px and flatten onto white so
+     * Tesseract runs faster and more accurately on mobile.
+     */
+    function prepareImageForOCR(src, maxSide = 1800) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.width * scale));
+          c.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL('image/jpeg', 0.92));
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+      });
+    }
+
+    // Drag & Drop support on OCR dropzone
+    const dropzone = document.getElementById('ocr-dropzone');
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-indigo-500', 'bg-indigo-950/20');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (ev) => displayPreviewAndRunOCR(ev.target.result, file.name);
+        reader.readAsDataURL(file);
+      } else {
+        showToast('Please drop a valid image file (PNG, JPG, WEBP).', 'error');
+      }
+    });
+
+    async function displayPreviewAndRunOCR(imageSrc, labelName) {
+      const emptyState = document.getElementById('ocr-empty-state');
+      const previewContainer = document.getElementById('ocr-preview-container');
+      const previewImg = document.getElementById('ocr-preview-img');
+      const laserBar = document.getElementById('ocr-laser-bar');
+      const statusPanel = document.getElementById('ocr-status-panel');
+      const statusText = document.getElementById('ocr-status-text');
+      const progressBar = document.getElementById('ocr-progress-bar');
+      const confBadge = document.getElementById('ocr-confidence-badge');
+
+      imageSrc = await prepareImageForOCR(imageSrc);
+
+      emptyState.classList.add('hidden');
+      previewContainer.classList.remove('hidden');
+      previewImg.src = imageSrc;
+      laserBar.classList.remove('hidden');
+      statusPanel.classList.remove('hidden');
+      progressBar.style.width = '10%';
+      confBadge.textContent = 'Scanning...';
+      statusText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Running OCR on ${labelName}...`;
+
+      try {
+        // Execute Tesseract.js v5 Recognition
+        const result = await Tesseract.recognize(imageSrc, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              const pct = Math.round((m.progress || 0) * 100);
+              progressBar.style.width = `${Math.max(15, pct)}%`;
+              statusText.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Extracting text & entities (${pct}%)...`;
+            }
+          }
+        });
+
+        laserBar.classList.add('hidden');
+        progressBar.style.width = '100%';
+
+        const rawText = (result.data.text || '').trim();
+        const confidence = Math.round(result.data.confidence || 88);
+
+        confBadge.textContent = `${confidence}% Confidence`;
+        confBadge.className = 'font-mono text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        statusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> OCR Complete — Auto-populated Lead Form!`;
+
+        // Show raw text box
+        document.getElementById('ocr-raw-wrapper').classList.remove('hidden');
+        document.getElementById('ocr-raw-text').value = rawText;
+
+        // Parse entities & auto-fill the form
+        parseAndPopulateLeadForm(rawText);
+
+        // Update OCR KPI & Log
+        state.ocrScansCount++;
+        addActivityLog(`OCR Scan completed (${confidence}% conf) — Auto-filled lead form`, 'ocr');
+        persistState();
+        updateKPIs();
+
+        showToast(`OCR extracted contact details (${confidence}% confidence)!`, 'success');
+      } catch (error) {
+        console.error('Tesseract OCR Error:', error);
+        laserBar.classList.add('hidden');
+        statusText.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> OCR failed. Please try a clearer image.`;
+        showToast('OCR processing encountered an error. You can still enter fields manually.', 'error');
+      }
+    }
+
+    function clearOCRScanner() {
+      document.getElementById('ocr-file-input').value = '';
+      document.getElementById('ocr-empty-state').classList.remove('hidden');
+      document.getElementById('ocr-preview-container').classList.add('hidden');
+      document.getElementById('ocr-status-panel').classList.add('hidden');
+      document.getElementById('ocr-raw-wrapper').classList.add('hidden');
+      document.getElementById('auto-filled-pill').classList.add('hidden');
+    }
+
+    function reparseRawText() {
+      const text = document.getElementById('ocr-raw-text').value;
+      if (!text.trim()) return;
+      parseAndPopulateLeadForm(text);
+      showToast('Re-parsed raw OCR text into lead fields.', 'info');
+    }
+
+    /**
+     * Smart Regex + Heuristic NLP Parser for Business Cards & Documents
+     */
+    function parseAndPopulateLeadForm(rawText) {
+      const lines = rawText
+        .split('\n')
+        .map(l => l.replace(/^[|•\-–—*]+/, '').trim())
+        .filter(l => l.length > 1);
+
+      // 1. Extract Email
+      const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      const email = emailMatch ? emailMatch[0].toLowerCase() : '';
+
+      // 2. Extract Phone Number (supports +91, international, spaces, hyphens)
+      // Prefer an Indian mobile pattern (+91 / 10 digits starting 6-9), then fall back to a generic match
+      const phoneMatch = rawText.match(/(?:\+?91[\s.-]?)?[6-9]\d{4}[\s.-]?\d{5}/) ||
+        rawText.match(/(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?)?\d{3,5}[\s.-]?\d{4,5}/);
+      let phone = phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, '') : '';
+      if (phone && !phone.startsWith('+')) {
+        // Normalize 10-digit Indian mobile numbers cleanly
+        if (phone.length === 10) phone = '+91 ' + phone.slice(0, 5) + ' ' + phone.slice(5);
+      } else if (phone.startsWith('+91') && phone.length === 13) {
+        phone = '+91 ' + phone.slice(3, 8) + ' ' + phone.slice(8);
+      }
+
+      // 3. Extract Website
+      const webMatch = rawText.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?/g);
+      let website = '';
+      if (webMatch) {
+        website = webMatch.find(w => !w.includes('@')) || '';
+      }
+
+      // 4. Identify Job Title & Executive Seniority
+      const titleKeywords = /(ceo|cto|cfo|coo|founder|co-founder|director|vp|vice president|manager|head|lead|engineer|consultant|partner|president|owner)/i;
+      let jobTitle = '';
+      for (const line of lines) {
+        if (titleKeywords.test(line) && !line.includes('@') && line.length < 55) {
+          jobTitle = line.replace(/^(title|role)\s*:\s*/i, '').trim();
+          break;
+        }
+      }
+
+      // 5. Identify Company Name
+      const companyKeywords = /(systems|labs|solutions|technologies|tech|group|inc|ltd|pvt|corp|enterprise|logistics|fintech|manufacturing|cloud|studio|agency|consulting|global|india)/i;
+      let company = '';
+      for (const line of lines) {
+        if (
+          companyKeywords.test(line) &&
+          !line.includes('@') &&
+          !line.toLowerCase().startsWith('www.') &&
+          !line.toLowerCase().startsWith('web:')
+        ) {
+          company = line.replace(/^(company|org)\s*:\s*/i, '').trim();
+          break;
+        }
+      }
+      // Fallback company from email domain if not matched
+      if (!company && email) {
+        const domainPart = email.split('@')[1].split('.')[0];
+        if (!['gmail', 'yahoo', 'outlook', 'hotmail'].includes(domainPart)) {
+          company = domainPart.charAt(0).toUpperCase() + domainPart.slice(1);
+        }
+      }
+
+      // 6. Identify Person's Full Name
+      let fullName = '';
+      for (const line of lines) {
+        const cleaned = line.replace(/^(name)\s*:\s*/i, '').trim();
+        if (
+          cleaned.includes('@') ||
+          /\d{4,}/.test(cleaned) ||
+          cleaned.toLowerCase().startsWith('www.') ||
+          cleaned.toLowerCase().startsWith('web:') ||
+          cleaned.toLowerCase().startsWith('phone:') ||
+          cleaned.toLowerCase().startsWith('email:') ||
+          cleaned === company ||
+          cleaned === jobTitle
+        ) {
+          continue;
+        }
+        // Typically 2 to 4 capitalized words
+        const words = cleaned.split(/\s+/);
+        if (words.length >= 2 && words.length <= 4 && /^[A-Za-z.\s]+$/.test(cleaned)) {
+          fullName = cleaned;
+          break;
+        }
+      }
+
+      // 7. Identify Service / Interest Line
+      let serviceTag = '';
+      for (const line of lines) {
+        if (
+          line !== fullName &&
+          line !== company &&
+          line !== jobTitle &&
+          !line.includes('@') &&
+          !/\d{5,}/.test(line) &&
+          !line.toLowerCase().includes('www.') &&
+          !line.toLowerCase().startsWith('web:')
+        ) {
+          serviceTag = line;
+          break;
+        }
+      }
+
+      // Populate Form Inputs
+      if (fullName) document.getElementById('lead-name').value = fullName;
+      if (phone) document.getElementById('lead-phone').value = phone;
+      if (email) document.getElementById('lead-email').value = email;
+      if (company) document.getElementById('lead-company').value = company;
+      document.getElementById('lead-source').value = 'OCR Card Scan';
+
+      const combinedService = [serviceTag, jobTitle].filter(Boolean).join(' • ');
+      if (combinedService) {
+        document.getElementById('lead-service').value = combinedService;
+      } else if (website) {
+        document.getElementById('lead-service').value = `Inbound Inquiry (${website})`;
+      }
+
+      // Rule: Auto-escalate executive titles to Hot priority
+      if (state.settings.autoHotOcr && /(ceo|founder|vp|director|president|owner)/i.test(jobTitle)) {
+        document.getElementById('lead-priority').value = 'Hot';
+      }
+
+      document.getElementById('auto-filled-pill').classList.remove('hidden');
+    }
+
+    // ============================================================================
+    // 2. LEAD SUBMISSION & AUTOMATED MULTI-STEP DRIP SCHEDULER
+    // ============================================================================
+
+    let pendingSubmitMode = 'launch';
+
+    function handleLeadSubmit(event) {
+      event.preventDefault();
+
+      const launch = pendingSubmitMode !== 'save';
+      pendingSubmitMode = 'launch';
+
+      const name = document.getElementById('lead-name').value.trim();
+      const phone = document.getElementById('lead-phone').value.trim();
+      const email = document.getElementById('lead-email').value.trim();
+      const company = document.getElementById('lead-company').value.trim() || 'Independent';
+      const source = document.getElementById('lead-source').value;
+      const priority = document.getElementById('lead-priority').value;
+      const service = document.getElementById('lead-service').value.trim() || 'Automation Suite';
+      const cadence = document.getElementById('lead-cadence').value;
+      const followUpDate = document.getElementById('lead-followup').value || '';
+
+      if (!name || !phone) {
+        showToast('Full Name and Phone/WhatsApp are required.', 'error');
+        return;
+      }
+      if (normalizePhoneForWA(phone).length < 10) {
+        showToast('Please enter a valid phone number (at least 10 digits) so WhatsApp can open the chat.', 'error');
+        return;
+      }
+
+      const now = Date.now();
+      const contextVars = { name, company, service };
+      const autoSend = launch && state.settings.autoWelcome;
+
+      // Build 3-step automated sequence based on cadence preset
+      const sequenceConfig = getCadenceConfig(cadence);
+      const steps = sequenceConfig.map((cfg, idx) => {
+        const tplKey = `step${idx + 1}`;
+        const rawTpl = state.templates[tplKey] || DEFAULT_TEMPLATES[tplKey];
+        const dueDate = new Date(now + cfg.delayMs);
+        const isAutoSentNow = idx === 0 && autoSend;
+
+        return {
+          stepNum: idx + 1,
+          title: cfg.title,
+          channel: cfg.channel,
+          delayLabel: cfg.delayLabel,
+          dueAt: dueDate.toISOString(),
+          status: isAutoSentNow ? 'Sent' : 'Scheduled',
+          sentAt: isAutoSentNow ? new Date().toISOString() : null,
+          message: compileTemplate(rawTpl, contextVars)
+        };
+      });
+
+      const newLead = {
+        id: 'lead-' + now,
+        name,
+        phone,
+        email,
+        company,
+        source,
+        service,
+        priority,
+        status: !launch ? 'New' : (autoSend ? 'Contacted' : 'Follow-up Scheduled'),
+        cadence,
+        followUpDate,
+        createdAt: new Date(now).toISOString(),
+        steps
+      };
+
+      // Actually open WhatsApp / email for Step 1 when launching
+      let launchNote = '';
+      if (autoSend) {
+        const result = openChannel(newLead, steps[0]);
+        if (result === 'blocked' || result === 'no-email') {
+          steps[0].status = 'Scheduled';
+          steps[0].sentAt = null;
+          newLead.status = 'Follow-up Scheduled';
+          launchNote = result === 'blocked'
+            ? ' Popup was blocked — tap the WhatsApp button on the lead to send Step 1.'
+            : ' Step 1 is by email but no email was entered — add one or send via WhatsApp.';
+        }
+      }
+
+      state.leads.unshift(newLead);
+
+      addActivityLog(`Captured lead "${name}" (${company}) via ${source}`, 'info');
+      if (steps[0].status === 'Sent') {
+        addActivityLog(`Opened Step 1 (${steps[0].channel}) for ${name}`, 'auto');
+      }
+      if (launch) {
+        addActivityLog(`Scheduled ${steps.filter(s => s.status === 'Scheduled').length} automated follow-ups for ${name}`, 'info');
+      }
+
+      persistState();
+      renderAll();
+      resetLeadForm();
+      clearOCRScanner();
+
+      if (!launch) {
+        showToast(`Lead "${name}" saved. Add the next lead, or select leads and press Launch Automation when ready.`, 'success');
+      } else {
+        showToast(
+          (steps[0].status === 'Sent'
+            ? 'Lead saved! Step 1 opened — press Send there. Follow-ups are scheduled.'
+            : 'Lead saved & 3-step automated sequence scheduled!') + launchNote,
+          launchNote ? 'info' : 'success'
+        );
+      }
+    }
+
+    function getCadenceConfig(cadence) {
+      if (cadence === 'enterprise') {
+        return [
+          { title: 'Executive Intro & Deck', channel: 'WhatsApp', delayLabel: 'Immediate', delayMs: 0 },
+          { title: '24h Architecture & ROI Brief', channel: 'Email', delayLabel: '+24 Hours', delayMs: 24 * 3600000 },
+          { title: '3-Day Discovery Call Nudge', channel: 'WhatsApp', delayLabel: '+3 Days', delayMs: 72 * 3600000 }
+        ];
+      }
+      if (cadence === 'whatsapp') {
+        return [
+          { title: 'Instant WhatsApp Welcome', channel: 'WhatsApp', delayLabel: 'Immediate', delayMs: 0 },
+          { title: '24h Quick Demo Video Link', channel: 'WhatsApp', delayLabel: '+24 Hours', delayMs: 24 * 3600000 },
+          { title: '3-Day Direct Offer Check-In', channel: 'WhatsApp', delayLabel: '+3 Days', delayMs: 72 * 3600000 }
+        ];
+      }
+      // Default: standard
+      return [
+        { title: 'Instant Welcome Drip', channel: 'WhatsApp', delayLabel: 'Immediate', delayMs: 0 },
+        { title: '24h Value & Case Study', channel: 'Email', delayLabel: '+24 Hours', delayMs: 24 * 3600000 },
+        { title: '3-Day Proposal Follow-Up', channel: 'WhatsApp', delayLabel: '+3 Days', delayMs: 72 * 3600000 }
+      ];
+    }
+
+    function resetLeadForm() {
+      document.getElementById('lead-capture-form').reset();
+      document.getElementById('auto-filled-pill').classList.add('hidden');
+      setFollowUpPreset(1);
+    }
+
+    // ============================================================================
+    // 3. AUTOMATED FOLLOW-UP EXECUTION & WHATSAPP / EMAIL LAUNCHERS
+    // ============================================================================
+
+    function isSampleLead(lead) {
+      return !!lead.isSample || SAMPLE_PHONES.includes(lead.phone);
+    }
+
+    function sampleBlockedToast(lead) {
+      showToast(`${lead.name} is a SAMPLE lead with a demo number — nothing was opened. Add a real lead to send for real.`, 'info');
+    }
+
+    /**
+     * Really opens the channel: WhatsApp chat with the message pre-filled, or the email app.
+     * Returns 'ok' | 'sample' | 'blocked' | 'no-email'.
+     */
+    function openChannel(lead, step) {
+      if (isSampleLead(lead)) return 'sample';
+
+      if (step.channel === 'Email') {
+        if (!lead.email) return 'no-email';
+        const a = document.createElement('a');
+        a.href = buildMailtoUrl(lead.email, `Following up: ${lead.service} for ${lead.company}`, step.message);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return 'ok';
+      }
+
+      const w = window.open(buildWhatsAppUrl(lead.phone, step.message), '_blank');
+      if (!w) return 'blocked';
+      try { w.opener = null; } catch (e) { /* ignore */ }
+      return 'ok';
+    }
+
+    function markStepSent(lead, targetStep) {
+      targetStep.status = 'Sent';
+      targetStep.sentAt = new Date().toISOString();
+
+      // Advance lead status intelligently
+      const remainingSteps = lead.steps.filter(s => s.status === 'Scheduled');
+      if (lead.status === 'New') {
+        lead.status = 'Contacted';
+      } else if (remainingSteps.length > 0 && lead.status === 'Contacted') {
+        lead.status = 'Follow-up Scheduled';
+      } else if (remainingSteps.length === 0 && (lead.status === 'Contacted' || lead.status === 'Follow-up Scheduled')) {
+        lead.status = 'Qualified';
+      }
+    }
+
+    function runNextFollowUp(leadId, specificStepNum = null) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+
+      const targetStep = specificStepNum
+        ? lead.steps.find(s => s.stepNum === specificStepNum)
+        : lead.steps.find(s => s.status === 'Scheduled');
+
+      if (!targetStep) {
+        showToast(`All automated steps for ${lead.name} have already been executed!`, 'info');
+        return;
+      }
+
+      const result = openChannel(lead, targetStep);
+      if (result === 'blocked') {
+        showToast('Your browser blocked the WhatsApp popup. Allow popups for this page and try again.', 'error');
+        return;
+      }
+      if (result === 'no-email') {
+        showToast(`${lead.name} has no email address — Step ${targetStep.stepNum} is an email step. Add an email in the lead or use WhatsApp.`, 'error');
+        return;
+      }
+
+      markStepSent(lead, targetStep);
+
+      addActivityLog(`Executed Step ${targetStep.stepNum} (${targetStep.channel}) for ${lead.name}${result === 'sample' ? ' [sample — simulated]' : ''}`, 'auto');
+      persistState();
+      renderAll();
+
+      if (state.activeModalLeadId === leadId) {
+        openLeadModal(leadId);
+      }
+
+      if (result === 'sample') {
+        showToast(`Step ${targetStep.stepNum} simulated for sample lead ${lead.name} (demo number — nothing was sent).`, 'info');
+      } else {
+        showToast(
+          targetStep.channel === 'Email'
+            ? `Step ${targetStep.stepNum} opened in your email app for ${lead.name} — press Send there.`
+            : `Step ${targetStep.stepNum} opened in WhatsApp for ${lead.name} — press Send there.`,
+          'success'
+        );
+      }
+    }
+
+    function normalizePhoneForWA(phone) {
+      let d = (phone || '').replace(/\D/g, '');
+      if (!d) return '';
+      if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+      if (d.length === 10) d = '91' + d; // default country code: India
+      return d;
+    }
+
+    function buildWhatsAppUrl(phone, message) {
+      const digits = normalizePhoneForWA(phone);
+      const encodedText = encodeURIComponent(message || '');
+      return digits
+        ? `https://wa.me/${digits}?text=${encodedText}`
+        : `https://wa.me/?text=${encodedText}`;
+    }
+
+    function currentMessageFor(lead) {
+      const step = lead.steps.find(s => s.status === 'Scheduled') || lead.steps[lead.steps.length - 1];
+      return step.message;
+    }
+
+    function openWhatsAppForLead(leadId) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      if (isSampleLead(lead)) { sampleBlockedToast(lead); return; }
+      const w = window.open(buildWhatsAppUrl(lead.phone, currentMessageFor(lead)), '_blank');
+      if (!w) { showToast('Your browser blocked the WhatsApp popup. Allow popups and try again.', 'error'); return; }
+      try { w.opener = null; } catch (e) { /* ignore */ }
+      addActivityLog(`Opened WhatsApp chat with ${lead.name}`, 'info');
+      persistState();
+      renderActivityLogs();
+    }
+
+    function openEmailForLead(leadId) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      if (isSampleLead(lead)) { sampleBlockedToast(lead); return; }
+      if (!lead.email) { showToast(`${lead.name} has no email address.`, 'error'); return; }
+      const a = document.createElement('a');
+      a.href = buildMailtoUrl(lead.email, `Following up: ${lead.service} for ${lead.company}`, currentMessageFor(lead));
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      addActivityLog(`Opened email draft for ${lead.name}`, 'info');
+      persistState();
+      renderActivityLogs();
+    }
+
+    function openStepWhatsApp(leadId, stepNum) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      const step = lead.steps.find(s => s.stepNum === stepNum);
+      if (!step) return;
+      if (isSampleLead(lead)) { sampleBlockedToast(lead); return; }
+      const w = window.open(buildWhatsAppUrl(lead.phone, step.message), '_blank');
+      if (!w) { showToast('Your browser blocked the WhatsApp popup. Allow popups and try again.', 'error'); return; }
+      try { w.opener = null; } catch (e) { /* ignore */ }
+    }
+
+    // ---------------------------------------------------------------- Follow-up date helpers
+    function ymd(d) {
+      const z = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+    }
+
+    function dateOffset(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return ymd(d);
+    }
+
+    function setFollowUpPreset(days) {
+      const el = document.getElementById('lead-followup');
+      if (el) el.value = dateOffset(days);
+    }
+
+    function followUpInfo(lead) {
+      const d = lead.followUpDate;
+      if (!d) return { bucket: 'none', label: 'No follow-up date set', cls: 'text-slate-500' };
+      const today = ymd(new Date());
+      const pretty = new Date(d + 'T00:00:00').toLocaleDateString([], { day: 'numeric', month: 'short' });
+      if (d < today) return { bucket: 'overdue', label: `Overdue since ${pretty}`, cls: 'text-rose-400 font-semibold' };
+      if (d === today) return { bucket: 'today', label: 'Follow up today', cls: 'text-amber-300 font-semibold' };
+      if (d === dateOffset(1)) return { bucket: 'tomorrow', label: 'Follow up tomorrow', cls: 'text-cyan-300' };
+      const diff = Math.round((new Date(d + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+      return { bucket: diff <= 7 ? 'week' : 'later', label: `Follow up ${pretty}`, cls: 'text-slate-300' };
+    }
+
+    function updateLeadField(leadId, field, value) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      lead[field] = value;
+      const nice = field === 'priority' ? `temperature to ${value}` : `follow-up date to ${value || 'none'}`;
+      addActivityLog(`Updated ${lead.name} ${nice}`, 'info');
+      persistState();
+      renderAll();
+      if (state.activeModalLeadId === leadId) openLeadModal(leadId);
+      showToast(`${lead.name}: ${nice}`, 'success');
+    }
+
+    function quickFilterFollowUp(value) {
+      switchMainTab('workspace');
+      document.getElementById('pipeline-followup-filter').value = value;
+      renderPipeline();
+      document.getElementById('pipeline-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function clearSampleLeads() {
+      const before = state.leads.length;
+      state.leads = state.leads.filter(l => !isSampleLead(l));
+      state.selected.clear();
+      const removed = before - state.leads.length;
+      if (removed) addActivityLog(`Removed ${removed} sample lead(s)`, 'warn');
+      persistState();
+      renderAll();
+      showToast(removed ? `${removed} sample lead(s) removed. Only your real leads remain.` : 'No sample leads to remove.', 'info');
+    }
+
+    // ---------------------------------------------------------------- Bulk selection & Launch Automation
+    function toggleLeadSelect(leadId, checked) {
+      if (checked) state.selected.add(leadId); else state.selected.delete(leadId);
+      updateBulkUI();
+    }
+
+    function toggleSelectAll(checked) {
+      getFilteredLeads().forEach(l => { if (checked) state.selected.add(l.id); else state.selected.delete(l.id); });
+      renderPipeline();
+    }
+
+    function updateBulkUI() {
+      const filtered = getFilteredLeads();
+      const selectedCount = state.leads.filter(l => state.selected.has(l.id)).length;
+      const allChecked = filtered.length > 0 && filtered.every(l => state.selected.has(l.id));
+      const toolbar = document.getElementById('bulk-toolbar');
+      if (toolbar) toolbar.classList.toggle('hidden', state.pipelineView === 'kanban');
+      document.getElementById('filtered-count').textContent = filtered.length;
+      document.getElementById('selected-count').textContent = `${selectedCount} selected`;
+      document.getElementById('bulk-launch-n').textContent = selectedCount;
+      document.getElementById('select-all-leads').checked = allChecked;
+    }
+
+    function applyBulkFollowUp() {
+      const ids = state.leads.filter(l => state.selected.has(l.id));
+      const date = document.getElementById('bulk-followup').value;
+      if (ids.length === 0) { showToast('Tick the leads first, then set the follow-up date.', 'error'); return; }
+      if (!date) { showToast('Pick a follow-up date first.', 'error'); return; }
+      ids.forEach(l => { l.followUpDate = date; });
+      addActivityLog(`Set follow-up ${date} for ${ids.length} selected lead(s)`, 'info');
+      persistState();
+      renderAll();
+      showToast(`Follow-up date ${date} set for ${ids.length} lead(s).`, 'success');
+    }
+
+    let bulkState = null;
+
+    function openBulkModal() {
+      const ids = state.leads.filter(l => state.selected.has(l.id)).map(l => l.id);
+      if (ids.length === 0) {
+        showToast('Tick one or more leads first (or use "Select all" after filtering).', 'error');
+        return;
+      }
+      bulkState = { ids, done: {}, mode: 'step' };
+      document.querySelector('input[name="bulk-mode"][value="step"]').checked = true;
+      document.getElementById('bulk-custom-msg').classList.add('hidden');
+      document.getElementById('bulk-modal-followup').value = document.getElementById('bulk-followup').value || dateOffset(2);
+      document.getElementById('bulk-modal').classList.remove('hidden');
+      renderBulkModal();
+    }
+
+    function closeBulkModal() {
+      document.getElementById('bulk-modal').classList.add('hidden');
+      bulkState = null;
+      renderAll();
+    }
+
+    function setBulkMode(mode) {
+      if (!bulkState) return;
+      bulkState.mode = mode;
+      document.getElementById('bulk-custom-msg').classList.toggle('hidden', mode !== 'custom');
+      renderBulkModal();
+    }
+
+    function bulkMessageFor(lead) {
+      if (bulkState.mode === 'custom') {
+        const tpl = document.getElementById('bulk-custom-msg').value.trim() || DEFAULT_TEMPLATES.step2;
+        return { channel: 'WhatsApp', message: compileTemplate(tpl, lead), step: null };
+      }
+      const step = lead.steps.find(s => s.status === 'Scheduled');
+      if (step) return { channel: step.channel, message: step.message, step };
+      return { channel: 'WhatsApp', message: lead.steps[lead.steps.length - 1].message, step: null, resend: true };
+    }
+
+    function renderBulkModal() {
+      if (!bulkState) return;
+      const total = bulkState.ids.length;
+      const doneCount = Object.keys(bulkState.done).length;
+      document.getElementById('bulk-progress-text').textContent = `${doneCount} of ${total} opened`;
+      document.getElementById('bulk-progress-bar').style.width = `${total ? Math.round(doneCount / total * 100) : 0}%`;
+
+      const nextId = bulkState.ids.find(id => !bulkState.done[id]);
+      const btn = document.getElementById('bulk-next-btn');
+      if (nextId) {
+        const l = state.leads.find(x => x.id === nextId);
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-brands fa-whatsapp text-lg"></i> Open next: ${escapeHtml(l ? l.name : '')} <i class="fa-solid fa-arrow-right"></i>`;
+      } else {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> All selected leads processed';
+      }
+
+      document.getElementById('bulk-list').innerHTML = bulkState.ids.map(id => {
+        const lead = state.leads.find(l => l.id === id);
+        if (!lead) return '';
+        const m = bulkMessageFor(lead);
+        const done = bulkState.done[id];
+        return `
+          <div class="p-2.5 rounded-xl border ${done ? 'bg-emerald-950/20 border-emerald-500/25' : 'bg-slate-900/80 border-slate-800'} flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs sm:text-sm font-bold text-white">${escapeHtml(lead.name)}</span>
+                ${isSampleLead(lead) ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">SAMPLE</span>' : ''}
+                <span class="text-[10px] text-slate-400">${m.channel === 'Email' ? '<i class="fa-solid fa-envelope text-cyan-400 mr-1"></i>Email' : '<i class="fa-brands fa-whatsapp text-emerald-400 mr-1"></i>WhatsApp'}</span>
+                ${m.resend ? '<span class="text-[10px] text-amber-300">(all steps done — re-sends last message)</span>' : ''}
+              </div>
+              <p class="text-[11px] font-mono text-slate-500">${escapeHtml(lead.phone)}</p>
+              <p class="text-[11px] text-slate-400 truncate">${escapeHtml(m.message)}</p>
+            </div>
+            ${done
+              ? `<span class="text-[11px] font-semibold text-emerald-400 shrink-0"><i class="fa-solid fa-check mr-1"></i>${done === 'sample' ? 'Simulated' : 'Opened'}</span>`
+              : `<button type="button" onclick="bulkSendOne('${lead.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-semibold shrink-0 transition">Open</button>`
+            }
+          </div>`;
+      }).join('');
+    }
+
+    function bulkOpenNext() {
+      if (!bulkState) return;
+      const nextId = bulkState.ids.find(id => !bulkState.done[id]);
+      if (nextId) bulkSendOne(nextId);
+    }
+
+    function bulkSendOne(leadId) {
+      if (!bulkState || bulkState.done[leadId]) return;
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      const m = bulkMessageFor(lead);
+      const result = openChannel(lead, { channel: m.channel, message: m.message });
+
+      if (result === 'blocked') { showToast('Your browser blocked the WhatsApp popup. Allow popups for this page and try again.', 'error'); return; }
+      if (result === 'no-email') { showToast(`${lead.name} has no email address — skipped. Use the custom WhatsApp message instead.`, 'error'); bulkState.done[leadId] = 'sample'; renderBulkModal(); return; }
+
+      if (m.step) {
+        markStepSent(lead, m.step);
+      } else if (lead.status === 'New') {
+        lead.status = 'Contacted';
+      }
+      const fu = document.getElementById('bulk-modal-followup').value;
+      if (fu) lead.followUpDate = fu;
+
+      bulkState.done[leadId] = result === 'sample' ? 'sample' : 'sent';
+      addActivityLog(`Launch Automation: ${m.channel} opened for ${lead.name}${result === 'sample' ? ' [sample — simulated]' : ''}`, 'auto');
+      persistState();
+      renderBulkModal();
+      updateKPIs();
+    }
+
+    function buildMailtoUrl(email, subject, body) {
+      const targetEmail = email || '';
+      return `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    function deleteLead(leadId) {
+      const lead = state.leads.find(l => l.id === leadId);
+      state.leads = state.leads.filter(l => l.id !== leadId);
+      state.selected.delete(leadId);
+      if (lead) {
+        addActivityLog(`Removed lead "${lead.name}" from pipeline`, 'warn');
+      }
+      persistState();
+      renderAll();
+      showToast('Lead deleted from pipeline.', 'info');
+    }
+
+    // ============================================================================
+    // 4. UI RENDERING (KPIs, LIST/KANBAN PIPELINE, QUEUE, LOGS, MODAL)
+    // ============================================================================
+
+
+    // ============================================================================
+    // DASHBOARD: every saved lead + what to do with it next
+    // ============================================================================
+    let dashFilter = 'all';
+
+    function relTime(ms) {
+      const m = Math.round(Math.abs(ms) / 60000);
+      if (m < 1) return 'now';
+      let t;
+      if (m < 60) t = m + ' min';
+      else if (m < 1440) t = Math.round(m / 60) + ' h';
+      else t = Math.round(m / 1440) + ' d';
+      return ms < 0 ? t + ' ago' : 'in ' + t;
+    }
+
+    function telHref(phone) {
+      return 'tel:' + String(phone || '').replace(/[^\d+]/g, '');
+    }
+
+    // Works out the single next thing to do for a lead.
+    // rank: 0 overdue, 1 follow-up today, 2 message due, 3 not contacted yet, 4 waiting, 5 sequence finished, 6 won
+    function nextActionFor(lead) {
+      const now = Date.now();
+      const sentN = lead.steps.filter(s => s.status === 'Sent').length;
+      const next = lead.steps.filter(s => s.status === 'Scheduled').sort((a, b) => a.stepNum - b.stepNum)[0];
+      const fu = followUpInfo(lead);
+      const call = { label: 'Call', href: telHref(lead.phone) };
+      const send = next ? { label: 'Send step ' + next.stepNum, fn: `runNextFollowUp('${lead.id}')` } : null;
+
+      if (lead.status === 'Won') {
+        return { rank: 6, tone: 'done', title: 'Won. Nothing left to do.', detail: sentN + ' of ' + lead.steps.length + ' messages were sent.', primary: null, secondary: null };
+      }
+      if (fu.bucket === 'overdue') {
+        return { rank: 0, tone: 'late', title: 'Follow up now, it is overdue',
+          detail: fu.label + (next ? '. Step ' + next.stepNum + ' (' + next.channel + ') is still unsent.' : '.'),
+          primary: sentN === 0 && send ? send : call, secondary: sentN === 0 ? call : send };
+      }
+      if (fu.bucket === 'today') {
+        return { rank: 1, tone: 'today', title: 'Follow up today',
+          detail: 'You planned this for today' + (next ? '. Next message: step ' + next.stepNum + ' by ' + next.channel + '.' : '.'),
+          primary: sentN === 0 && send ? send : call, secondary: sentN === 0 ? call : send };
+      }
+      if (sentN === 0 && next) {
+        return { rank: 3, tone: 'idle', title: 'Send the first message',
+          detail: 'Saved ' + relTime(new Date(lead.createdAt).getTime() - now) + ', not contacted yet. First step goes by ' + next.channel + '.',
+          primary: send, secondary: call };
+      }
+      if (next) {
+        const due = new Date(next.dueAt).getTime();
+        const when = new Date(due).toLocaleDateString([], { day: 'numeric', month: 'short' });
+        if (due <= now) {
+          return { rank: 2, tone: 'today', title: 'Send step ' + next.stepNum + ': ' + next.title,
+            detail: 'Was due ' + relTime(due - now) + ' by ' + next.channel + '.', primary: send, secondary: call };
+        }
+        return { rank: 4, tone: 'wait', title: 'Wait for step ' + next.stepNum,
+          detail: next.title + ' by ' + next.channel + ' ' + relTime(due - now) + ' (' + when + ').',
+          primary: call, secondary: { label: 'Send now', fn: `runNextFollowUp('${lead.id}')` } };
+      }
+      return { rank: 5, tone: 'idle', title: 'Messages done. Ask for a decision.',
+        detail: 'All ' + lead.steps.length + ' steps sent. Call to qualify, then update the stage.',
+        primary: call, secondary: { label: 'Mark won', fn: `setLeadStatus('${lead.id}','Won')` } };
+    }
+
+    function setLeadStatus(leadId, value) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      lead.status = value;
+      addActivityLog(`Moved ${lead.name} to "${value}"`, value === 'Won' ? 'success' : 'info');
+      persistState();
+      renderAll();
+      if (state.activeModalLeadId === leadId) openLeadModal(leadId);
+    }
+
+    function saveLeadNote(leadId, value) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      lead.nextNote = value.trim();
+      persistState();
+    }
+
+    function setDashFilter(f) {
+      dashFilter = f;
+      renderDashboard();
+    }
+
+    function dashBtn(a, primary) {
+      if (!a) return '';
+      const cls = primary
+        ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+        : 'border border-slate-700 text-slate-200 hover:bg-slate-800';
+      const base = 'px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ' + cls;
+      return a.href
+        ? `<a href="${a.href}" class="${base}">${a.label}</a>`
+        : `<button onclick="${a.fn}" class="${base}">${a.label}</button>`;
+    }
+
+    function renderDashboard() {
+      const list = document.getElementById('dash-list');
+      if (!list) return;
+
+      document.getElementById('dash-date').textContent =
+        new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) +
+        '. ' + state.leads.length + ' lead' + (state.leads.length === 1 ? '' : 's') + ' saved.';
+
+      const prioOrder = { Hot: 0, Warm: 1, Cold: 2 };
+      const rows = state.leads.map(l => ({ lead: l, act: nextActionFor(l) }));
+      rows.sort((a, b) =>
+        a.act.rank - b.act.rank ||
+        (prioOrder[a.lead.priority] ?? 3) - (prioOrder[b.lead.priority] ?? 3) ||
+        new Date(b.lead.createdAt) - new Date(a.lead.createdAt));
+
+      const groups = {
+        all:  { label: 'All leads',       test: r => true },
+        now:  { label: 'Act now',         test: r => r.act.rank <= 2 },
+        new:  { label: 'Not contacted',   test: r => r.act.rank === 3 },
+        wait: { label: 'Waiting',         test: r => r.act.rank === 4 },
+        done: { label: 'Finished',        test: r => r.act.rank >= 5 }
+      };
+
+      document.getElementById('dash-tiles').innerHTML = Object.keys(groups).map(k => {
+        const n = rows.filter(groups[k].test).length;
+        const urgent = k === 'now' && n > 0 ? 'text-amber-300' : 'text-white';
+        return `<button type="button" onclick="setDashFilter('${k}')" class="dash-tile ${dashFilter === k ? 'active' : ''}">
+          <div class="text-xs text-slate-400">${groups[k].label}</div>
+          <div class="text-2xl font-semibold mt-1 ${urgent}">${n}</div>
+        </button>`;
+      }).join('');
+
+      const q = (document.getElementById('dash-search').value || '').toLowerCase().trim();
+      const shown = rows.filter(groups[dashFilter].test).filter(r => !q ||
+        [r.lead.name, r.lead.company, r.lead.phone, r.lead.service].some(v => String(v || '').toLowerCase().includes(q)));
+
+      document.getElementById('dash-list-title').textContent = groups[dashFilter].label + ' (' + shown.length + ')';
+
+      if (state.leads.length === 0) {
+        list.innerHTML = `<div class="px-4 py-14 text-center">
+          <p class="text-sm text-slate-200">No leads saved yet.</p>
+          <p class="text-xs text-slate-500 mt-1">Scan a card or type one in, and it will show up here with its next step.</p>
+          <button onclick="switchMainTab('workspace')" class="mt-4 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium">Add the first lead</button>
+        </div>`;
+      } else if (shown.length === 0) {
+        list.innerHTML = `<div class="px-4 py-12 text-center text-sm text-slate-500">Nothing in this view.</div>`;
+      } else {
+        const stages = ['New', 'Contacted', 'Follow-up Scheduled', 'Qualified', 'Won'];
+        list.innerHTML = shown.map(({ lead, act }) => {
+          const sample = isSampleLead(lead);
+          const sentN = lead.steps.filter(s => s.status === 'Sent').length;
+          const titleCls = act.tone === 'late' ? 'text-rose-300' : act.tone === 'today' ? 'text-amber-200' : act.tone === 'done' ? 'text-slate-500' : 'text-white';
+          return `
+          <div class="dash-row tone-${act.tone} px-4 py-4 grid gap-4 md:grid-cols-12 items-start">
+            <div class="md:col-span-3 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="openLeadModal('${lead.id}')" class="text-sm font-semibold text-white hover:text-indigo-300 text-left">${escapeHtml(lead.name)}</button>
+                ${renderPriorityBadge(lead.priority)}
+                ${sample ? '<span class="text-[10px] uppercase tracking-wide text-slate-500">sample</span>' : ''}
+              </div>
+              <p class="text-xs text-slate-400 mt-1 truncate">${escapeHtml(lead.company)}</p>
+              <p class="text-xs text-slate-500 truncate">${escapeHtml(lead.service)}</p>
+              <p class="text-[11px] text-slate-500 font-mono mt-1">${escapeHtml(lead.phone)}</p>
+            </div>
+
+            <div class="md:col-span-4 min-w-0">
+              <p class="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Next</p>
+              <p class="text-sm font-medium ${titleCls}">${escapeHtml(act.title)}</p>
+              <p class="text-xs text-slate-400 mt-0.5">${escapeHtml(act.detail)}</p>
+              <input class="dash-input mt-2" placeholder="Your own note, e.g. send price list" value="${escapeHtml(lead.nextNote || '')}" onchange="saveLeadNote('${lead.id}', this.value)" />
+            </div>
+
+            <div class="md:col-span-5 space-y-2.5">
+              <div class="flex flex-wrap gap-2 md:justify-end">
+                ${dashBtn(act.primary, true)}
+                ${dashBtn(act.secondary, false)}
+                <button onclick="openLeadModal('${lead.id}')" class="px-2 py-1.5 text-xs text-slate-400 hover:text-white">Details</button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="block">
+                  <span class="text-[10px] uppercase tracking-wide text-slate-500">Stage</span>
+                  <select class="dash-input mt-0.5" onchange="setLeadStatus('${lead.id}', this.value)">
+                    ${stages.map(st => `<option ${st === lead.status ? 'selected' : ''}>${st}</option>`).join('')}
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="text-[10px] uppercase tracking-wide text-slate-500">Follow-up on</span>
+                  <input type="date" class="dash-input mt-0.5" value="${lead.followUpDate || ''}" onchange="updateLeadField('${lead.id}', 'followUpDate', this.value)" />
+                </label>
+              </div>
+              <p class="text-[11px] text-slate-500 md:text-right">${sentN} of ${lead.steps.length} messages sent</p>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // stage breakdown
+      const total = state.leads.length || 1;
+      document.getElementById('dash-stages').innerHTML = ['New', 'Contacted', 'Follow-up Scheduled', 'Qualified', 'Won'].map(st => {
+        const n = state.leads.filter(l => l.status === st).length;
+        return `<div>
+          <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">${st}</span><span class="text-slate-400 font-mono">${n}</span></div>
+          <div class="h-1.5 rounded bg-slate-800"><div class="h-1.5 rounded bg-indigo-500" style="width:${Math.round(n / total * 100)}%"></div></div>
+        </div>`;
+      }).join('');
+
+      // recent activity
+      const logs = state.logs.slice(0, 6);
+      document.getElementById('dash-activity').innerHTML = logs.length
+        ? logs.map(l => `<div class="flex gap-2"><span class="text-slate-500 font-mono shrink-0">${escapeHtml(l.time)}</span><span class="text-slate-300">${escapeHtml(l.text)}</span></div>`).join('')
+        : '<p class="text-slate-500">Nothing yet.</p>';
+    }
+
+    function renderAll() {
+      updateKPIs();
+      renderDashboard();
+      renderPipeline();
+      renderAutomationQueue();
+      renderActivityLogs();
+    }
+
+    function updateKPIs() {
+      const totalLeads = state.leads.length;
+      let activeSequences = 0;
+      let totalMsgsSent = 0;
+      let convertedCount = 0;
+
+      state.leads.forEach(lead => {
+        const pending = lead.steps.filter(s => s.status === 'Scheduled').length;
+        const sent = lead.steps.filter(s => s.status === 'Sent').length;
+        if (pending > 0) activeSequences++;
+        totalMsgsSent += sent;
+        if (lead.status === 'Qualified' || lead.status === 'Won') convertedCount++;
+      });
+
+      const conversionRate = totalLeads > 0 ? Math.round((convertedCount / totalLeads) * 100) : 0;
+
+      document.getElementById('kpi-total-leads').textContent = totalLeads;
+      document.getElementById('kpi-ocr-scans').textContent = state.ocrScansCount;
+      document.getElementById('kpi-active-seq').textContent = activeSequences;
+      document.getElementById('kpi-msgs-sent').textContent = totalMsgsSent;
+      document.getElementById('kpi-conversion').textContent = `${conversionRate}%`;
+
+      const dueCount = state.leads.filter(l => {
+        if (l.status === 'Won') return false;
+        const b = followUpInfo(l).bucket;
+        return b === 'overdue' || b === 'today';
+      }).length;
+      document.getElementById('kpi-followup-due').textContent = dueCount;
+    }
+
+    function setPipelineView(view) {
+      state.pipelineView = view;
+      const listBtn = document.getElementById('btn-view-list');
+      const kanbanBtn = document.getElementById('btn-view-kanban');
+
+      if (view === 'list') {
+        listBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition';
+        kanbanBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+      } else {
+        kanbanBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-white transition';
+        listBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+      }
+      renderPipeline();
+    }
+
+    function getFilteredLeads() {
+      const search = (document.getElementById('pipeline-search').value || '').toLowerCase();
+      const statusFilter = document.getElementById('pipeline-status-filter').value;
+      const priorityFilter = document.getElementById('pipeline-priority-filter').value;
+      const followFilter = document.getElementById('pipeline-followup-filter').value;
+
+      return state.leads.filter(lead => {
+        const matchesSearch =
+          lead.name.toLowerCase().includes(search) ||
+          lead.company.toLowerCase().includes(search) ||
+          lead.phone.toLowerCase().includes(search) ||
+          lead.service.toLowerCase().includes(search);
+
+        const matchesStatus = statusFilter === 'ALL' || lead.status === statusFilter;
+        const matchesPriority = priorityFilter === 'ALL' || lead.priority === priorityFilter;
+
+        const bucket = followUpInfo(lead).bucket;
+        let matchesFollow = true;
+        if (followFilter === 'DUE') matchesFollow = (bucket === 'overdue' || bucket === 'today') && lead.status !== 'Won';
+        else if (followFilter === 'OVERDUE') matchesFollow = bucket === 'overdue';
+        else if (followFilter === 'TODAY') matchesFollow = bucket === 'today';
+        else if (followFilter === 'TOMORROW') matchesFollow = bucket === 'tomorrow';
+        else if (followFilter === 'WEEK') matchesFollow = ['today', 'tomorrow', 'week'].includes(bucket);
+        else if (followFilter === 'NONE') matchesFollow = bucket === 'none';
+
+        return matchesSearch && matchesStatus && matchesPriority && matchesFollow;
+      });
+    }
+
+    function renderPipeline() {
+      const container = document.getElementById('pipeline-container');
+      const filteredLeads = getFilteredLeads();
+
+      if (filteredLeads.length === 0) {
+        container.className = 'mt-4 space-y-3 max-h-[680px] overflow-y-auto pr-1';
+        container.innerHTML = `
+          <div class="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-800 bg-slate-900/30">
+            <i class="fa-solid fa-inbox text-3xl text-slate-600 mb-2"></i>
+            <p class="text-sm font-semibold text-slate-300">No leads match your current filter</p>
+            <p class="text-xs text-slate-500 mt-1">Scan a business card or add a new lead on the left to start automating.</p>
+          </div>
+        `;
+        updateBulkUI();
+        return;
+      }
+
+      if (state.pipelineView === 'kanban') {
+        renderKanbanView(container, filteredLeads);
+      } else {
+        renderDetailedListView(container, filteredLeads);
+      }
+      updateBulkUI();
+    }
+
+    function renderDetailedListView(container, leads) {
+      container.className = 'mt-4 space-y-3 max-h-[680px] overflow-y-auto pr-1';
+      container.innerHTML = leads.map(lead => {
+        const sentCount = lead.steps.filter(s => s.status === 'Sent').length;
+        const totalSteps = lead.steps.length;
+        const nextStep = lead.steps.find(s => s.status === 'Scheduled');
+        const sample = isSampleLead(lead);
+        const fu = followUpInfo(lead);
+        const checked = state.selected.has(lead.id) ? 'checked' : '';
+
+        return `
+          <div class="glass-card-elevated rounded-2xl p-4 hover:border-indigo-500/40 transition-all group">
+            <div class="flex items-start gap-3">
+              <input type="checkbox" ${checked} onchange="toggleLeadSelect('${lead.id}', this.checked)" class="mt-1.5 w-4 h-4 accent-indigo-500 rounded shrink-0" title="Select for bulk Launch Automation" />
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <!-- Lead Info -->
+                  <div class="space-y-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <button onclick="openLeadModal('${lead.id}')" class="text-base font-bold text-white hover:text-indigo-400 transition text-left">
+                        ${escapeHtml(lead.name)}
+                      </button>
+                      ${renderPriorityBadge(lead.priority)}
+                      ${renderStatusBadge(lead.status)}
+                      ${sample ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30" title="Demo lead with a fake number — messages are simulated">SAMPLE</span>` : ''}
+                      ${lead.source === 'OCR Card Scan'
+                        ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20"><i class="fa-solid fa-expand mr-1"></i>OCR</span>`
+                        : `<span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-800 text-slate-400">${escapeHtml(lead.source)}</span>`
+                      }
+                    </div>
+                    <p class="text-xs text-slate-300 font-medium">
+                      <i class="fa-solid fa-building text-slate-500 mr-1"></i>${escapeHtml(lead.company)}
+                      <span class="mx-1.5 text-slate-600">•</span>
+                      <span class="text-indigo-300">${escapeHtml(lead.service)}</span>
+                    </p>
+                    <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap">
+                      <span><i class="fa-brands fa-whatsapp text-emerald-400 mr-1"></i>${escapeHtml(lead.phone)}</span>
+                      ${lead.email ? `<span class="break-all"><i class="fa-solid fa-envelope text-slate-500 mr-1"></i>${escapeHtml(lead.email)}</span>` : ''}
+                    </div>
+                  </div>
+
+                  <!-- Quick Action Buttons -->
+                  <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    ${nextStep ? `
+                      <button onclick="runNextFollowUp('${lead.id}')" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm shadow-indigo-500/25 transition flex items-center gap-1.5" title="Open Step ${nextStep.stepNum} (${nextStep.channel}) with the message ready">
+                        <i class="fa-solid fa-bolt"></i>
+                        Run Step ${nextStep.stepNum}
+                      </button>
+                    ` : `
+                      <button onclick="openLeadModal('${lead.id}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold hover:bg-emerald-500/20 transition" title="See which messages were sent and when">
+                        <i class="fa-solid fa-check-double mr-1"></i>Sequence Done · View history
+                      </button>
+                    `}
+
+                    <button onclick="openWhatsAppForLead('${lead.id}')" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-semibold transition flex items-center gap-1.5" title="Open WhatsApp chat with the message pre-filled">
+                      <i class="fa-brands fa-whatsapp text-sm"></i>WhatsApp
+                    </button>
+
+                    ${lead.email ? `
+                      <button onclick="openEmailForLead('${lead.id}')" class="p-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 transition" title="Open email draft with template">
+                        <i class="fa-solid fa-envelope text-xs"></i>
+                      </button>
+                    ` : ''}
+
+                    <button onclick="openLeadModal('${lead.id}')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="Inspect Sequence Timeline">
+                      <i class="fa-solid fa-timeline text-xs"></i>
+                    </button>
+
+                    <button onclick="deleteLead('${lead.id}')" class="p-2 rounded-xl bg-slate-800/70 hover:bg-rose-600/80 text-slate-400 hover:text-white border border-slate-700/60 transition" title="Delete Lead">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Temperature + follow-up date (editable inline) -->
+                <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
+                  <label class="flex items-center gap-1.5 text-slate-400">Temp
+                    <select onchange="updateLeadField('${lead.id}', 'priority', this.value)" class="px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-white focus:outline-none">
+                      <option value="Hot" ${lead.priority === 'Hot' ? 'selected' : ''}>Hot</option>
+                      <option value="Warm" ${lead.priority === 'Warm' ? 'selected' : ''}>Warm</option>
+                      <option value="Cold" ${lead.priority === 'Cold' ? 'selected' : ''}>Cold</option>
+                    </select>
+                  </label>
+                  <label class="flex items-center gap-1.5 text-slate-400">Follow-up
+                    <input type="date" value="${lead.followUpDate || ''}" onchange="updateLeadField('${lead.id}', 'followUpDate', this.value)" class="px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-white focus:outline-none" />
+                  </label>
+                  <span class="${fu.cls}"><i class="fa-regular fa-calendar mr-1"></i>${fu.label}</span>
+                </div>
+
+                <!-- Drip Sequence Progress Bar -->
+                <div class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div class="flex items-center gap-2 flex-1">
+                    <div class="flex gap-1.5 flex-1 max-w-[220px]">
+                      ${lead.steps.map(step => `
+                        <div class="h-1.5 flex-1 rounded-full ${step.status === 'Sent' ? 'bg-emerald-400' : 'bg-slate-700'}" title="Step ${step.stepNum}: ${step.title} (${step.status})"></div>
+                      `).join('')}
+                    </div>
+                    <span class="text-[11px] font-mono text-slate-400">${sentCount}/${totalSteps} steps sent</span>
+                  </div>
+
+                  <div class="text-[11px] text-slate-400">
+                    ${nextStep
+                      ? `<span class="text-amber-300"><i class="fa-regular fa-clock mr-1"></i>Next: ${escapeHtml(nextStep.title)} (${nextStep.channel})</span>`
+                      : `<span class="text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>All ${totalSteps} messages sent</span>`
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderKanbanView(container, leads) {
+      const stages = ['New', 'Contacted', 'Follow-up Scheduled', 'Qualified', 'Won'];
+      container.className = 'mt-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3 overflow-x-auto pb-2';
+
+      container.innerHTML = stages.map(stage => {
+        const stageLeads = leads.filter(l => l.status === stage);
+        return `
+          <div class="rounded-2xl bg-slate-900/70 border border-slate-800/90 p-3 flex flex-col min-h-[340px]">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+              <span class="text-xs font-bold text-slate-200">${stage}</span>
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-mono bg-slate-800 text-slate-400">${stageLeads.length}</span>
+            </div>
+            <div class="space-y-2.5 flex-1">
+              ${stageLeads.length === 0 ? `<p class="text-[11px] text-slate-600 text-center py-6">No leads</p>` : ''}
+              ${stageLeads.map(lead => {
+                const nextStep = lead.steps.find(s => s.status === 'Scheduled');
+                return `
+                  <div onclick="openLeadModal('${lead.id}')" class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition space-y-1.5">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-xs font-bold text-white truncate">${escapeHtml(lead.name)}</span>
+                      ${renderPriorityBadge(lead.priority)}
+                    </div>
+                    <p class="text-[11px] text-slate-400 truncate">${escapeHtml(lead.company)}</p>
+                    <p class="text-[10px] ${followUpInfo(lead).cls}"><i class="fa-regular fa-calendar mr-1"></i>${followUpInfo(lead).label}</p>
+                    <div class="pt-1 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span>${lead.steps.filter(s => s.status === 'Sent').length}/${lead.steps.length} drips</span>
+                      ${nextStep
+                        ? `<button onclick="event.stopPropagation(); runNextFollowUp('${lead.id}')" class="px-2 py-0.5 rounded bg-indigo-600/80 hover:bg-indigo-500 text-white font-sans font-semibold">Run #${nextStep.stepNum}</button>`
+                        : `<span class="text-emerald-400">Done</span>`
+                      }
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAutomationQueue() {
+      const queueContainer = document.getElementById('automation-queue-list');
+      const countBadge = document.getElementById('queue-count-badge');
+
+      const pendingItems = [];
+      state.leads.forEach(lead => {
+        lead.steps.forEach(step => {
+          if (step.status === 'Scheduled') {
+            pendingItems.push({ lead, step });
+          }
+        });
+      });
+
+      pendingItems.sort((a, b) => new Date(a.step.dueAt) - new Date(b.step.dueAt));
+      countBadge.textContent = `${pendingItems.length} pending`;
+
+      if (pendingItems.length === 0) {
+        queueContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">All scheduled follow-ups are up to date!</p>`;
+        return;
+      }
+
+      queueContainer.innerHTML = pendingItems.slice(0, 8).map(({ lead, step }) => `
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-white truncate">${escapeHtml(lead.name)}</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-indigo-300 font-mono">Step ${step.stepNum}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 truncate">
+              ${step.channel === 'WhatsApp' ? '<i class="fa-brands fa-whatsapp text-emerald-400 mr-1"></i>' : '<i class="fa-solid fa-envelope text-cyan-400 mr-1"></i>'}
+              ${escapeHtml(step.title)} • <span class="text-amber-300">${step.delayLabel}</span>
+            </p>
+          </div>
+          <button onclick="runNextFollowUp('${lead.id}', ${step.stepNum})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[11px] font-semibold shrink-0 transition">
+            Dispatch
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderActivityLogs() {
+      const logContainer = document.getElementById('activity-log-list');
+      if (state.logs.length === 0) {
+        logContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No automation activity recorded yet.</p>`;
+        return;
+      }
+
+      logContainer.innerHTML = state.logs.slice(0, 15).map(log => {
+        let iconClass = 'fa-circle-info text-indigo-400';
+        if (log.type === 'ocr') iconClass = 'fa-expand text-cyan-400';
+        if (log.type === 'auto') iconClass = 'fa-bolt text-amber-400';
+        if (log.type === 'success') iconClass = 'fa-circle-check text-emerald-400';
+        if (log.type === 'warn') iconClass = 'fa-trash text-rose-400';
+
+        return `
+          <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/70 flex items-start gap-2">
+            <i class="fa-solid ${iconClass} mt-0.5 text-[11px]"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-[11px] text-slate-300 leading-snug">${escapeHtml(log.text)}</p>
+              <span class="text-[10px] text-slate-500">${escapeHtml(log.time)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ============================================================================
+    // 5. LEAD DETAIL MODAL & SEQUENCE TIMELINE
+    // ============================================================================
+
+    function openLeadModal(leadId) {
+      const lead = state.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      state.activeModalLeadId = leadId;
+
+      document.getElementById('modal-lead-name').textContent = lead.name;
+      document.getElementById('modal-lead-sub').textContent = `${lead.company} • ${lead.service}`;
+      document.getElementById('modal-lead-source').textContent = lead.source;
+      document.getElementById('modal-lead-phone').textContent = lead.phone;
+      document.getElementById('modal-lead-email').textContent = lead.email || 'No email provided';
+      document.getElementById('modal-status-select').value = lead.status;
+
+      const prioBadge = document.getElementById('modal-lead-priority');
+      prioBadge.textContent = lead.priority;
+      prioBadge.className = `px-2.5 py-0.5 rounded-full text-xs font-bold ${
+        lead.priority === 'Hot'
+          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+          : lead.priority === 'Warm'
+          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+          : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+      }`;
+
+      const waLink = document.getElementById('modal-wa-link');
+      const mailLink = document.getElementById('modal-mail-link');
+      waLink.removeAttribute('target');
+      waLink.href = '#';
+      waLink.onclick = (e) => { e.preventDefault(); openWhatsAppForLead(leadId); };
+      mailLink.href = '#';
+      mailLink.onclick = (e) => { e.preventDefault(); openEmailForLead(leadId); };
+
+      const stepsContainer = document.getElementById('modal-steps-container');
+      stepsContainer.innerHTML = lead.steps.map(step => {
+        const isSent = step.status === 'Sent';
+
+        return `
+          <div class="p-3.5 rounded-xl border ${isSent ? 'bg-emerald-950/20 border-emerald-500/25' : 'bg-slate-900/90 border-slate-800'} space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${isSent ? 'bg-emerald-500 text-slate-950' : 'bg-indigo-600 text-white'}">
+                  ${isSent ? '<i class="fa-solid fa-check"></i>' : step.stepNum}
+                </span>
+                <span class="text-xs sm:text-sm font-bold text-white">${escapeHtml(step.title)}</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">${step.channel} • ${step.delayLabel}</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                ${isSent
+                  ? `<span class="text-[11px] font-mono text-emerald-400">Sent ${formatTime(new Date(step.sentAt))}</span>`
+                  : `<button onclick="runNextFollowUp('${lead.id}', ${step.stepNum})" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                      <i class="fa-solid fa-bolt mr-1"></i>Send Now
+                    </button>`
+                }
+                <button type="button" onclick="openStepWhatsApp('${lead.id}', ${step.stepNum})" class="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-semibold transition" title="Open in WhatsApp">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-300 bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 leading-relaxed">
+              "${escapeHtml(step.message)}"
+            </p>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('lead-modal').classList.remove('hidden');
+    }
+
+    function closeLeadModal() {
+      state.activeModalLeadId = null;
+      document.getElementById('lead-modal').classList.add('hidden');
+    }
+
+    function updateModalLeadStatus() {
+      if (!state.activeModalLeadId) return;
+      const lead = state.leads.find(l => l.id === state.activeModalLeadId);
+      if (!lead) return;
+
+      const newStatus = document.getElementById('modal-status-select').value;
+      lead.status = newStatus;
+      addActivityLog(`Updated ${lead.name} status to "${newStatus}"`, newStatus === 'Won' ? 'success' : 'info');
+      persistState();
+      renderAll();
+      showToast(`Status updated to ${newStatus}`, 'success');
+    }
+
+    // ============================================================================
+    // 6. SETTINGS, TEMPLATES & CSV EXPORT
+    // ============================================================================
+
+    function switchMainTab(tabName) {
+      const views = { dashboard: 'view-dashboard', workspace: 'view-workspace', rules: 'view-rules' };
+      const on  = 'tab-nav-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition bg-indigo-600 text-white';
+      const off = 'tab-nav-btn px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition text-slate-400 hover:text-white';
+      Object.keys(views).forEach(k => {
+        document.getElementById(views[k]).classList.toggle('hidden', k !== tabName);
+        document.getElementById('tab-btn-' + k).className = k === tabName ? on : off;
+      });
+      document.getElementById('kpi-bar').classList.toggle('hidden', tabName !== 'workspace');
+      if (tabName === 'dashboard') renderDashboard();
+    }
+
+    function syncSettingsUI() {
+      document.getElementById('rule-auto-welcome').checked = !!state.settings.autoWelcome;
+      document.getElementById('rule-auto-hot-ocr').checked = !!state.settings.autoHotOcr;
+      document.getElementById('rule-auto-escalate').checked = !!state.settings.autoEscalate;
+
+      document.getElementById('tpl-step-1').value = state.templates.step1;
+      document.getElementById('tpl-step-2').value = state.templates.step2;
+      document.getElementById('tpl-step-3').value = state.templates.step3;
+    }
+
+    function saveAutomationSettings() {
+      state.settings.autoWelcome = document.getElementById('rule-auto-welcome').checked;
+      state.settings.autoHotOcr = document.getElementById('rule-auto-hot-ocr').checked;
+      state.settings.autoEscalate = document.getElementById('rule-auto-escalate').checked;
+      persistState();
+      showToast('Automation trigger rules updated!', 'success');
+    }
+
+    function saveTemplates() {
+      state.templates.step1 = document.getElementById('tpl-step-1').value.trim() || DEFAULT_TEMPLATES.step1;
+      state.templates.step2 = document.getElementById('tpl-step-2').value.trim() || DEFAULT_TEMPLATES.step2;
+      state.templates.step3 = document.getElementById('tpl-step-3').value.trim() || DEFAULT_TEMPLATES.step3;
+      persistState();
+      showToast('Dynamic message templates saved!', 'success');
+    }
+
+    function exportLeadsCSV() {
+      if (state.leads.length === 0) {
+        showToast('No leads available to export.', 'error');
+        return;
+      }
+
+      const headers = ['ID', 'Name', 'Phone', 'Email', 'Company', 'Source', 'Service', 'Priority', 'Status', 'Steps Sent', 'Created At'];
+      const rows = state.leads.map(l => [
+        l.id,
+        `"${(l.name || '').replace(/"/g, '""')}"`,
+        `"${(l.phone || '').replace(/"/g, '""')}"`,
+        `"${(l.email || '').replace(/"/g, '""')}"`,
+        `"${(l.company || '').replace(/"/g, '""')}"`,
+        `"${(l.source || '').replace(/"/g, '""')}"`,
+        `"${(l.service || '').replace(/"/g, '""')}"`,
+        l.priority,
+        l.status,
+        `${l.steps.filter(s => s.status === 'Sent').length}/${l.steps.length}`,
+        l.createdAt
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `autolead_crm_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      addActivityLog(`Exported ${state.leads.length} leads to CSV`, 'info');
+      persistState();
+      renderActivityLogs();
+      showToast('Leads exported to CSV successfully!', 'success');
+    }
+
+    // ============================================================================
+    // UTILITY HELPERS
+    // ============================================================================
+
+    function compileTemplate(templateStr, vars) {
+      return templateStr
+        .replace(/\{\{name\}\}/gi, vars.name || 'there')
+        .replace(/\{\{company\}\}/gi, vars.company || 'your team')
+        .replace(/\{\{service\}\}/gi, vars.service || 'our solution');
+    }
+
+    function renderPriorityBadge(priority) {
+      if (priority === 'Hot') {
+        return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">Hot</span>`;
+      }
+      if (priority === 'Warm') {
+        return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">Warm</span>`;
+      }
+      return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">Cold</span>`;
+    }
+
+    function renderStatusBadge(status) {
+      const map = {
+        'New': 'bg-slate-800 text-slate-300 border-slate-700',
+        'Contacted': 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+        'Follow-up Scheduled': 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        'Qualified': 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
+        'Won': 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      };
+      const cls = map[status] || map['New'];
+      return `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cls}">${escapeHtml(status)}</span>`;
+    }
+
+    function addActivityLog(text, type = 'info') {
+      state.logs.unshift({
+        time: formatTime(new Date()),
+        text,
+        type
+      });
+      if (state.logs.length > 40) state.logs.pop();
+    }
+
+    function formatTime(dateObj) {
+      return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const styles = {
+        success: 'bg-slate-900/95 border-emerald-500/50 text-emerald-200',
+        error: 'bg-slate-900/95 border-rose-500/50 text-rose-200',
+        info: 'bg-slate-900/95 border-indigo-500/50 text-indigo-200'
+      };
+      const icons = {
+        success: 'fa-circle-check text-emerald-400',
+        error: 'fa-circle-exclamation text-rose-400',
+        info: 'fa-wand-magic-sparkles text-indigo-400'
+      };
+
+      toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${styles[type] || styles.info}`;
+      toast.innerHTML = `
+        <i class="fa-solid ${icons[type] || icons.info} text-base"></i>
+        <span class="flex-1">${escapeHtml(message)}</span>
+      `;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3600);
+    }
+  </script>
+</body>
+</html>
